@@ -1,0 +1,10 @@
+task BuildSearch {
+  goal: feature.add
+  target: product.search
+  action: implement
+  input: user.query
+  output: product.list
+  require: response.fast
+  forbid: secret.expose
+  verify: tests.pass
+}

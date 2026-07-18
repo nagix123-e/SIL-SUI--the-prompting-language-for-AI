@@ -1,0 +1,11 @@
+{
+  "version": "0.1",
+  "description": "SIL core dictionary codebook. The runtime source is packages/codebook/src/index.ts.",
+  "entries": [
+    { "id": "goal.feature.add", "namespace": "goal", "key": "feature.add", "code": "G12", "description": "Add a product feature", "aliases": ["add_feature"], "version": "0.1", "status": "active" },
+    { "id": "action.implement", "namespace": "action", "key": "implement", "code": "A01", "description": "Implement the requested change", "aliases": ["build", "create"], "version": "0.1", "status": "active" },
+    { "id": "target.screen.login", "namespace": "target", "key": "screen.login", "code": "T044", "description": "Login screen", "aliases": ["login_screen"], "version": "0.1", "status": "active" },
+    { "id": "require.existing.behavior.preserve", "namespace": "require", "key": "existing.behavior.preserve", "code": "R08", "description": "Preserve existing behavior", "aliases": ["preserve_behavior"], "version": "0.1", "status": "active" },
+    { "id": "forbid.secret.expose", "namespace": "forbid", "key": "secret.expose", "code": "X01", "description": "Do not expose secrets", "aliases": ["no_secret_exposure"], "version": "0.1", "status": "active" }
+  ]
+}

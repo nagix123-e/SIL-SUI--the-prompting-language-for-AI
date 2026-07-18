@@ -1,0 +1,16 @@
+task AddAuthentication {
+  goal: feature.add
+  target: user.authentication
+  action: implement
+  input: user.email
+  input: user.password
+  output: auth.session
+  require: password.hash
+  require: input.validate
+  require: error.safe
+  forbid: secret.hardcode
+  forbid: password.plaintext_store
+  verify: login.success
+  verify: invalid_credentials.reject
+  on_failure: transaction.rollback
+}
