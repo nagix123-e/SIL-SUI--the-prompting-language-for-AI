@@ -1,6 +1,6 @@
 {
   "name": "semantic-instruction-language",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -14,6 +14,12 @@
     "build": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext build",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "cli": "node --import tsx apps/cli/src/index.ts",
+    "mcp": "node portable-mcp/sil-mcp-server.mjs",
+    "mcp:kit": "node scripts/build-portable-mcp-kit.mjs",
+    "codebook:generate": "node --import tsx scripts/generate-codebook.ts",
+    "codebook:check": "node --import tsx scripts/generate-codebook.ts --check",
+    "knowledge:build": "node --import tsx scripts/build-gpt-knowledge-set.ts",
+    "docs:check": "node --import tsx scripts/check-sil-documentation.ts",
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
     "typecheck": "tsc --noEmit",

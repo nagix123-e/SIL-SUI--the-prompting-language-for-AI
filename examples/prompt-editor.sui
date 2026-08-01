@@ -1,0 +1,18 @@
+ui PromptEditor {
+  screen: prompt_editor
+  layout: sidebar.left_third
+  layout: editor.center
+  layout: sil_source.right
+
+  component: prompt_block_library
+  component: english_prompt_editor
+  component: sil_source_editor
+
+  interaction: block.click_insert_at_caret
+  interaction: block.drag_drop_insert
+  constraint: sidebar.collapsible
+
+  verify: click.inserts_at_current_caret
+  verify: drag_drop.inserts_at_drop_caret
+  on_failure: task.abort
+}

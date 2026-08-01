@@ -1,15 +1,20 @@
 import { coreCodebook } from "../../codebook/src/index";
 import { astToIr, formatIr, parseSil, type SilSyntaxError } from "../../parser/src/index";
-import { generatePrompt } from "../../prompt-generator/src/index";
+import { generateOpenCodeHandoff, generatePrompt } from "../../prompt-generator/src/index";
 import { quantizeIr } from "../../quantizer/src/index";
+import { assessReadiness, type ReadinessAssessment } from "../../readiness/src/index";
 import {
-  MAX_SOURCE_LENGTH,
   type Codebook,
   type Diagnostic,
   type SemanticIR,
-  emptyIr,
 } from "../../semantic-ir/src/index";
-import { calculateConfidence, validateAst, validateIr } from "../../validator/src/index";
+import { calculateConfidence, interpretUnregisteredReferences, validateAst, validateIr, type UnregisteredSemanticMarker } from "../../validator/src/index";
+import {
+  UnsupportedLanguageError,
+  analyzeNaturalLanguage,
+  type ConversionEvidence,
+} from "./english-analyzer";
+import { normalizeNaturalLanguageV03, type V03NaturalLanguageAdapter } from "../../v03/src/index";
 
 export interface CompilationResult {
   ir: SemanticIR;
@@ -19,84 +24,51 @@ export interface CompilationResult {
   diagnostics: Diagnostic[];
   valid: boolean;
   confidence: number;
-}
-
-function detectLanguage(source: string): "ja" | "en" | "unknown" {
-  if (/[\u3040-\u30ff\u3400-\u9fff]/u.test(source)) return "ja";
-  if (/[A-Za-z]/.test(source)) return "en";
-  return "unknown";
-}
-
-function contains(source: string, patterns: RegExp[]): boolean {
-  return patterns.some((pattern) => pattern.test(source));
-}
-
-function taskIdFromTarget(target: string): string {
-  return target
-    .split(".")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join("") + "Task";
-}
-
-export function naturalLanguageToIr(source: string): SemanticIR {
-  const text = source.trim();
-  if (!text) throw new Error("Source text is empty.");
-  if (text.length > MAX_SOURCE_LENGTH) {
-    throw new Error(`Source exceeds the ${MAX_SOURCE_LENGTH.toLocaleString()} character limit.`);
-  }
-
-  let goal = "task.execute";
-  if (contains(text, [/bug/i, /fix/i, /不具合/u, /バグ/u, /修正/u])) goal = "bug.fix";
-  else if (contains(text, [/add/i, /build/i, /create/i, /implement/i, /追加/u, /作成/u, /実装/u])) goal = "feature.add";
-  else if (contains(text, [/summari[sz]e/i, /要約/u])) goal = "content.summarize";
-  else if (contains(text, [/classif/i, /分類/u])) goal = "content.classify";
-
-  let target = "instruction.request";
-  if (contains(text, [/login screen/i, /ログイン画面/u])) target = "screen.login";
-  else if (contains(text, [/auth/i, /authentication/i, /認証/u])) target = "user.authentication";
-  else if (contains(text, [/product search/i, /検索/u])) target = "product.search";
-  else if (contains(text, [/\bapi\b/i, /endpoint/i, /エンドポイント/u])) target = "api.endpoint";
-  else if (contains(text, [/documentation/i, /\bdocs?\b/i, /ドキュメント/u, /文書/u])) target = "project.documentation";
-
-  const ir = emptyIr(taskIdFromTarget(target));
-  ir.goal = goal;
-  ir.target = target;
-  ir.action = contains(text, [/modify/i, /update/i, /edit/i, /変更/u, /更新/u]) ? "modify" : "implement";
-
-  if (contains(text, [/query/i, /検索語/u, /クエリ/u])) ir.inputs.push("user.query");
-  if (contains(text, [/email/i, /メール/u])) ir.inputs.push("user.email");
-  if (contains(text, [/password/i, /パスワード/u])) ir.inputs.push("user.password");
-  if (target === "product.search") ir.outputs.push("product.list");
-  if (target === "user.authentication" || target === "screen.login") ir.outputs.push("auth.session");
-
-  if (contains(text, [/preserve/i, /without breaking/i, /壊さず/u, /維持/u])) ir.required.push("existing.behavior.preserve");
-  if (contains(text, [/responsive/i, /レスポンシブ/u])) ir.required.push("ui.responsive");
-  if (contains(text, [/fast/i, /latency/i, /高速/u, /素早/u])) ir.required.push("response.fast");
-  if (contains(text, [/validat/i, /検証/u, /バリデーション/u])) ir.required.push("input.validate");
-  if (contains(text, [/hash/i, /ハッシュ/u])) ir.required.push("password.hash");
-  if (contains(text, [/simple/i, /シンプル/u])) ir.preferred.push("code.simple");
-
-  if (contains(text, [/do not expose.*secret/i, /secret.*expos/i, /秘密.*漏/u])) ir.forbidden.push("secret.expose");
-  if (contains(text, [/do not hardcode/i, /hardcoded? secret/i, /ハードコード/u])) ir.forbidden.push("secret.hardcode");
-  if (contains(text, [/no breaking/i, /breaking change/i, /破壊的変更/u])) ir.forbidden.push("change.breaking");
-  if (contains(text, [/plaintext password/i, /平文.*パスワード/u])) ir.forbidden.push("password.plaintext_store");
-
-  if (contains(text, [/test/i, /テスト/u])) ir.verification.push("tests.pass");
-  if (target === "screen.login") ir.verification.push("login.success");
-
-  ir.metadata = { sourceLanguage: detectLanguage(text) };
-  return ir;
+  evidence: ConversionEvidence[];
+  unregisteredReferences: UnregisteredSemanticMarker[];
+  readiness: ReadinessAssessment;
+  handoffPrompt: string;
 }
 
 function finishCompilation(
   ir: SemanticIR,
   codebook: Codebook,
   extraDiagnostics: Diagnostic[] = [],
+  evidence: ConversionEvidence[] = [],
 ): CompilationResult {
   const validation = validateIr(ir, codebook);
+  const unregisteredReferences = interpretUnregisteredReferences(ir, codebook);
   const quantized = quantizeIr(ir, codebook, "lossless");
-  const diagnostics = [...extraDiagnostics, ...validation.diagnostics, ...quantized.diagnostics];
-  const confidence = calculateConfidence(ir, diagnostics);
+  const losslessDerivedReferences = new Set(
+    evidence
+      .filter((item) => item.field !== "task" && item.kind === "derived")
+      .map((item) => item.value),
+  );
+  const diagnostics = [...extraDiagnostics, ...validation.diagnostics, ...quantized.diagnostics].filter(
+    (diagnostic) =>
+      !["unknown-reference", "unknown-preserved"].includes(diagnostic.code) ||
+      ![...losslessDerivedReferences].some((reference) => diagnostic.message.includes(`"${reference}"`)),
+  );
+  const semanticEvidence = evidence.filter((item) => item.field !== "task");
+  const evidenceCoverage = semanticEvidence.length
+    ? semanticEvidence.reduce(
+        (total, item) => total + (item.kind === "matched" ? 1 : item.kind === "derived" ? 0.65 : 0),
+        0,
+      ) / semanticEvidence.length
+    : null;
+  const rawConfidence = evidenceCoverage === null
+    ? calculateConfidence(ir, diagnostics)
+    : Math.max(
+        0,
+        Math.min(
+          1,
+          0.08 + evidenceCoverage * 0.9 -
+            diagnostics.filter((item) => item.severity === "error").length * 0.2 -
+            diagnostics.filter((item) => item.code === "unknown-reference").length * 0.03,
+        ),
+      );
+  const readiness = assessReadiness(ir, codebook, diagnostics, evidence);
+  const confidence = Math.min(rawConfidence, readiness.status === "blocked" ? readiness.score / 100 : 1);
   ir.metadata = {
     ...ir.metadata,
     confidence,
@@ -110,6 +82,10 @@ function finishCompilation(
     diagnostics,
     valid: validation.valid,
     confidence,
+    evidence,
+    unregisteredReferences,
+    readiness,
+    handoffPrompt: generateOpenCodeHandoff(ir, readiness),
   };
 }
 
@@ -119,7 +95,27 @@ export function compileSil(source: string, codebook = coreCodebook): Compilation
 }
 
 export function compileNaturalLanguage(source: string, codebook = coreCodebook): CompilationResult {
-  return finishCompilation(naturalLanguageToIr(source), codebook);
+  const analysis = analyzeNaturalLanguage(source, codebook);
+  return finishCompilation(analysis.ir, codebook, [], analysis.evidence);
+}
+
+/**
+ * Explicit multilingual boundary. No network call occurs here; a host must
+ * provide (or intentionally select) a deterministic/reviewed normalizer.
+ */
+export function compileMultilingualNaturalLanguage(source: string, adapter?: V03NaturalLanguageAdapter, codebook = coreCodebook): CompilationResult {
+  const normalized = normalizeNaturalLanguageV03(source, adapter);
+  if (!normalized.normalizedSource) throw new UnsupportedLanguageError(`No normalization adapter is configured for source language "${normalized.sourceLanguage}".`);
+  const result = compileNaturalLanguage(normalized.normalizedSource, codebook);
+  result.ir.metadata = {
+    ...result.ir.metadata,
+    sourceLanguage: "en",
+    originalSourceLanguage: normalized.sourceLanguage,
+    normalizedSemanticLanguage: "en",
+    outputIdentifierLanguage: "en",
+    warnings: [...(result.ir.metadata?.warnings ?? []), ...(normalized.status === "normalized" ? [`Normalized from ${normalized.sourceLanguage} through a configured adapter.`] : [])],
+  };
+  return result;
 }
 
 export function compile(source: string, codebook = coreCodebook): CompilationResult {
@@ -130,16 +126,167 @@ export function diagnosticFromError(error: unknown): Diagnostic {
   const syntax = error as SilSyntaxError;
   return {
     severity: "error",
-    code: syntax?.name === "SilSyntaxError" ? "syntax-error" : "compile-error",
+    code:
+      syntax?.name === "SilSyntaxError"
+        ? "syntax-error"
+        : error instanceof UnsupportedLanguageError
+          ? "unsupported-language"
+          : "compile-error",
     message: error instanceof Error ? error.message : "Unknown compilation error.",
     line: syntax?.line,
     column: syntax?.column,
   };
 }
 
-export { coreCodebook } from "../../codebook/src/index";
+export { coreCodebook, getCodebookStats, searchCodebook } from "../../codebook/src/index";
 export { parseSil, formatSil, formatIr, astToIr } from "../../parser/src/index";
+export { parseSui, suiAstToIr, validateSui, formatSui, formatSuiIr, generateSuiPrompt } from "../../sui/src/index";
+export { SUI_BLOCKS, SUI_BLOCK_FIELDS, SUI_BLOCK_FIELD_LABELS, suggestSuiBlocks } from "../../sui/src/index";
+export type { SuiBlock, SuggestedSuiBlock } from "../../sui/src/index";
+export type { SuiAst, SuiField, SuiIR, SuiStatement, SuiValidationResult } from "../../sui/src/index";
+export { formatV02, formatV02Semantic, formatV02TopLevelBlock, parseV02, parseV02Semantic, parseV02TopLevelBlock, validateBindings, validateV02, validateV02Semantic, validateV02TopLevelBlock } from "../../v02/src/index";
+export type { V02Binding, V02Contract, V02DataField, V02Example, V02Kind, V02Model, V02Parameter, V02SemanticDefinition, V02TopLevelBlock, V02TopLevelBlockKind, V02Validation } from "../../v02/src/index";
+export {
+  compileSilSuiBundle,
+  enrichSilSuiBundle,
+  formatSilSuiBundle,
+  isSilSuiBundleSource,
+  parseSilSuiBundle,
+  validateSilSuiBundle,
+} from "../../bundle/src/index";
+export type {
+  BundleContractKind,
+  BundleContractSource,
+  BundleContractValidation,
+  BundleContractVersion,
+  DeclaredSemanticExtension,
+  SemanticEnrichmentOptions,
+  SemanticEnrichmentResolver,
+  SemanticEvidence,
+  SemanticEvidenceSource,
+  SemanticReferenceResolution,
+  SemanticResearchRequest,
+  SilSuiBundle,
+  SilSuiBundleValidation,
+} from "../../bundle/src/index";
 export { dequantize, quantizeIr } from "../../quantizer/src/index";
-export { generatePrompt, generateJsonPrompt, generateMarkdownPrompt } from "../../prompt-generator/src/index";
-export { validateIr } from "../../validator/src/index";
-export type { SemanticIR, Diagnostic, Codebook } from "../../semantic-ir/src/index";
+export { generatePrompt, generateJsonPrompt, generateMarkdownPrompt, generateOpenCodeHandoff } from "../../prompt-generator/src/index";
+export { assessReadiness } from "../../readiness/src/index";
+export type { ReadinessAssessment, ReadinessGap, ReadinessStatus, ContinuationStatus, FailureForecast } from "../../readiness/src/index";
+export {
+  assessExecutionResult,
+  compileRpnProgram,
+  executeRpnProgram,
+  normalizeTask,
+  validateRpnProgram,
+} from "../../execution-result/src/index";
+export type {
+  ActionAdapterResult,
+  AssessExecutionResultOptions,
+  CapabilityAssessment,
+  CapabilityValue,
+  ConditionResult,
+  EvidenceSource,
+  EvidenceStatus,
+  ExecutionEvidence,
+  ExecutionPhase,
+  ExecutionResultAssessment,
+  ExecutionResultStatus,
+  FailureApplication,
+  FailureRule,
+  InstructionSource,
+  NormalizedTask,
+  PostconditionResult,
+  RpnInstruction,
+  RpnProgram,
+  RpnProgramValidation,
+  StackEntry,
+  StackValueType,
+  TrackedCondition,
+  VmDiagnostic,
+  VmExecutionContext,
+  VmExecutionResult,
+  VmTraceEntry,
+} from "../../execution-result/src/index";
+export { interpretUnregisteredReference, interpretUnregisteredReferences, validateIr } from "../../validator/src/index";
+export type { UnregisteredReferenceKind, UnregisteredSemanticMarker } from "../../validator/src/index";
+export { PROMPT_COLOR_CATEGORY } from "../../semantic-ir/src/index";
+export {
+  V03_VERSION,
+  V04_VERSION,
+  CURRENT_V0X_VERSION,
+  V03SyntaxError,
+  allItems,
+  allNodes,
+  allStatements,
+  applyV03Patch,
+  buildComponentGraph,
+  buildDependencyGraph,
+  formatV03,
+  formatSemanticIrV03,
+  formatV03Legacy,
+  normalizeNaturalLanguageV03,
+  deterministicJapaneseAdapter,
+  parseV03,
+  validateV03,
+  v03TaskToSemanticIr,
+} from "../../v03/src/index";
+export type {
+  V03ComponentGraph,
+  V03LoopSpec,
+  V03DependencyGraph,
+  V03Document,
+  V03Item,
+  V03NaturalLanguageAdapter,
+  V03Node,
+  V03NodeKind,
+  V03PatchOperation,
+  V03PatchResult,
+  V03Provenance,
+  V03ProvenanceKind,
+  V03ReadinessProfile,
+  V03SourceMetadata,
+  V03Statement,
+  V03SyntaxStyle,
+  V03Validation,
+} from "../../v03/src/index";
+export type {
+  SemanticIR,
+  Diagnostic,
+  Codebook,
+  CodebookEntry,
+  PromptColorCategory,
+  StatementKind,
+} from "../../semantic-ir/src/index";
+export { analyzeNaturalLanguage, naturalLanguageToIr } from "./english-analyzer";
+export type { ConversionEvidence, ConversionEvidenceKind, NaturalLanguageAnalysis } from "./english-analyzer";
+export {
+  inspectPromptForm,
+  parsePromptSections,
+  PROMPT_GUIDE_FIELDS,
+  STRUCTURED_PROMPT_TEMPLATE,
+} from "./prompt-structure";
+export type {
+  PromptFormInspection,
+  PromptGuideField,
+  PromptSection,
+} from "./prompt-structure";
+export {
+  PROMPT_BLOCKS,
+  PROMPT_BLOCK_KIND_LABELS,
+  PROMPT_BLOCK_KIND_ORDER,
+  highlightPromptText,
+  highlightSourceText,
+  insertPromptBlockText,
+  prependPromptBlockText,
+  suggestPromptBlocks,
+} from "./prompt-blocks";
+export type {
+  PromptBlock,
+  PromptBlockBinding,
+  PromptBlockKind,
+  PromptHighlightToken,
+  SourceHighlightLanguage,
+  SourceHighlightToken,
+  SuggestedPromptBlock,
+} from "./prompt-blocks";

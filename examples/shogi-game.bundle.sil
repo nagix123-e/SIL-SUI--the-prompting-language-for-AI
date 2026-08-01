@@ -1,0 +1,35 @@
+task BuildShogiGame {
+  version: 0.2
+  goal: feature.add
+  target: game.shogi
+  action: implement
+  input: ui_spec.ShogiGameScreen
+  output: game.board.state
+  verify: tests.pass
+  on_failure: task.abort
+  bind: output.game.board.state -> ui.ShogiGameScreen.board
+}
+
+ui ShogiGameScreen {
+  version: 0.2
+  screen: game.shogi
+  component: board
+  verify: render.complete
+  on_failure: task.abort
+}
+
+ui PromotionDialog {
+  version: 0.2
+  screen: dialog.promotion
+  component: promotion_choices
+  verify: render.complete
+  on_failure: task.abort
+}
+
+ui GameResultDialog {
+  version: 0.2
+  screen: dialog.game_result
+  component: result_summary
+  verify: render.complete
+  on_failure: task.abort
+}

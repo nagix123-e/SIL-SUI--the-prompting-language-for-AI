@@ -31,12 +31,23 @@ describe("SIL parser", () => {
 });
 
 describe("semantic compilation", () => {
-  it("compiles Japanese instructions with constraints", () => {
-    const result = compileNaturalLanguage("既存動作を壊さずログイン画面を追加し、秘密をハードコードしない。テストする。");
+  it("compiles English instructions with constraints", () => {
+    const result = compileNaturalLanguage(
+      "Add a login screen without breaking existing behavior. Do not hardcode secrets and add tests.",
+    );
     expect(result.ir.target).toBe("screen.login");
     expect(result.ir.required).toContain("existing.behavior.preserve");
     expect(result.ir.forbidden).toContain("secret.hardcode");
-    expect(result.ir.metadata?.sourceLanguage).toBe("ja");
+    expect(result.ir.metadata?.sourceLanguage).toBe("en");
+  });
+
+  it("rejects Japanese and mixed Japanese natural-language input", () => {
+    expect(() => compileNaturalLanguage("\u30ed\u30b0\u30a4\u30f3\u753b\u9762\u3092\u8ffd\u52a0\u3057\u3066\u304f\u3060\u3055\u3044\u3002")).toThrow(
+      "Only English natural-language instructions are supported.",
+    );
+    expect(() => compileNaturalLanguage("API\u3092\u66f4\u65b0\u3057\u3066\u304f\u3060\u3055\u3044\u3002")).toThrow(
+      "Only English natural-language instructions are supported.",
+    );
   });
 
   it("preserves unknown references in a lossless round trip", () => {

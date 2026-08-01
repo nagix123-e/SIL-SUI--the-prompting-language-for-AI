@@ -1,0 +1,1 @@
+Add a login screen without breaking existing behavior. Validate email and password, do not hardcode secrets, and add tests.

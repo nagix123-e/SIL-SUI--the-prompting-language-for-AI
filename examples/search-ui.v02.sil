@@ -1,0 +1,32 @@
+task BuildSearchUi {
+  version: 0.2
+  goal: feature.add
+  target: product.search
+  action: implement
+  output: search.results
+  verify: tests.pass
+  on_failure: task.abort
+
+  parameter response_time {
+    type: number
+    value: 200
+    unit: ms
+    operator: lte
+  }
+
+  model SearchRequest {
+    format: json_schema
+    field query {
+      type: string
+      required: true
+    }
+  }
+
+  example SearchRequestJson {
+    language: json
+    applies_to: model.SearchRequest
+    source: samples.search_request_json
+  }
+
+  bind: output.search.results -> ui.SearchScreen.search_results
+}

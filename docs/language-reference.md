@@ -1,4 +1,41 @@
-# SIL language reference · v0.1
+# SIL/SUI language reference · v0.4
+
+v0.4 is the canonical indentation-sensitive syntax; v0.1/v0.2 brace syntax and v0.3 contracts remain compatible. Natural-language input may be multilingual (including Japanese), but semantic identifiers are normalized to English through a configured adapter and the original language is retained in provenance. A Runner must report an unavailable adapter rather than silently translating or executing input. See [the v0.4 bounded-loop specification](../gpt-knowledge/13-v0.4-bounded-loops.md) for loop grammar and the v0.3 specification for the shared contract model.
+
+## Natural-language prompt form
+
+Free-form prose remains supported. For the highest deterministic coverage, use role labels followed by one value or a bullet list:
+
+`Goal`, `Target`, `Action`, `Inputs`, `Outputs`, `Requirements`, `Preferences`, `Forbidden`, `Verification`, and `On failure`.
+
+Accepted label aliases include `Objective`, `Scope`, `Operation`, `Context`, `Deliverables`, `Constraints`, `Acceptance criteria`, `Checks`, `Recovery`, and `Failure handling`. The role label is authoritative: for example, `unit tests` under `Verification` cannot be misclassified as an input or implementation action.
+
+The English analyzer uses five deterministic stages:
+
+1. split labeled sections, sentences, coordinated action frames, and bullet-list items;
+2. apply namespace-specific phrases and normalized lexical variants;
+3. compose codebook concepts and variants within the correct semantic role;
+4. preserve explicit unmatched details as readable lossless extension references.
+5. retain recognized technical names and detected proper nouns as lossless `input` context.
+
+Known names use classified references such as `language.sil`, `platform.ollama`, and `model.qwen3_6`. A model-version suffix is preserved rather than collapsed to its family. Unknown acronym, mixed-case, versioned, or context-position proper nouns use a normalized `context.*` reference. If a curated technology appears under an explicit `Target:` label, it also selects the registered `technology.*` target while remaining present in context.
+
+Numeric parameters retain their value and unit when recognized. Current parameter families include latency and timeout maxima, coverage minima, page sizes, result limits, and retry counts. For example, `latency under 200 ms` becomes `latency.max_200_ms`, while `retry once` becomes `retry.max_1`. These values remain lossless extension references when the finite core codebook does not contain the exact quantity.
+
+### Prompt-block metadata and suggestions
+
+The local interpreter exposes exactly 300 English prompt blocks, including function words such as `to`, `the`, `with`, and `should`, plus 100 curated AI and development terms. Clicking inserts at the textarea's current caret; dragging continues to insert at the drop-derived caret.
+
+Core codebook entries carry a numeric `colorCategory` used by the prompt highlighter. Values are `0` unclassified/black, `1` structure, `2` grammar, `3` verb, `4` noun, `5` data, `6` constraint, `7` logic, `8` verification, and `9` recovery. Namespace mapping assigns all current 10,000 entries; custom or future entries may remain `0` when no existing category is defensible. Longest matching phrases win, and phrases with conflicting category evidence remain black.
+
+The interpreter's optional prompt blocks are authored from the same ten SIL roles. A block records:
+
+- its visible English phrase and inserted text,
+- its grammatical or semantic color category,
+- the SIL fields in which it is useful, and
+- any registered SemanticRef or intentional lossless extension it represents.
+
+Suggestions are deterministic. The scorer prioritizes the active labeled section, the next missing role, cues in the most recent phrase, essential-vocabulary weight, and phrases not already present. It does not call a language model or execute the described task. Blocks are an authoring aid only; ordinary free text remains a first-class input.
 
 ## Grammar
 
@@ -12,7 +49,109 @@ SemanticRef   = Identifier, { ".", Identifier } ;
 Identifier    = Letter, { Letter | Digit | "_" } ;
 ```
 
-Line comments begin with `//`. A file contains one task in v0.1.
+Line comments begin with `//`. A single-contract SIL v0.1 file contains one task.
+
+## SIL/SUI bundle documents
+
+The Runner also accepts one source document containing exactly one `task` declaration followed or preceded by one or more named `ui` declarations. This is a **bundle document**: each declaration keeps its own SIL or SUI grammar and version, while the bundle layer resolves their relationships.
+
+```sil
+task BuildShogiGame {
+  version: 0.2
+  goal: feature.add
+  target: game.shogi
+  action: implement
+  input: ui_spec.ShogiGameScreen
+  output: game.board.state
+  verify: tests.pass
+  on_failure: task.abort
+  bind: output.game.board.state -> ui.ShogiGameScreen.board
+}
+
+ui ShogiGameScreen {
+  version: 0.2
+  screen: game.shogi
+  component: board
+  verify: render.complete
+  on_failure: task.abort
+}
+
+ui PromotionDialog {
+  version: 0.2
+  screen: dialog.promotion
+  component: promotion_choices
+  verify: render.complete
+  on_failure: task.abort
+}
+```
+
+Bundle rules:
+
+- exactly one `task` declaration is allowed;
+- UI declaration names must be unique;
+- `input: ui_spec.Name` must resolve to a bundled `ui Name` declaration. UI references are case-insensitive and treat `_` as a naming-style separator, so `ui_spec.shogi_game_screen` resolves to `ui ShogiGameScreen`;
+- a v0.2 `bind` target must resolve to the named v0.2 UI and one of its declared components; and
+- no contract is executed merely because the bundle validates.
+
+`sil parse`, `sil validate`, `sil compile`, and `sil format` detect a multi-contract document automatically. The existing single-contract parsers remain strict by design, so callers that directly use `parseSil`, `parseSui`, or `parseV02` should keep passing one declaration at a time.
+
+Alongside `task`, `ui`, and `semantic`, a bundle accepts reusable top-level v0.2 named blocks: `parameter`, `model`, `example`, `token`, `breakpoint`, `a11y`, and `transition`. They are validated with the same structural rules as their nested form and are forwarded in the compiled handoff as shared declarations. A shared `parameter` must declare `type` plus `value`, `source`, or `required`.
+
+### Local contract references
+
+Not every meaningful reference needs a Core entry or a separate semantic declaration. Bundle validation resolves the following as local contract references while preserving their literal spelling:
+
+- `parameter.Name`, `model.Name`, `example.Name`, `token.Name`, `breakpoint.Name`, `a11y.Name`, and `transition.Name` when the matching shared declaration exists;
+- `ui.*` values that are declared by a bundled v0.2 UI;
+- conventional verification labels ending in `.pass`, `.correct`, `.complete`, `.visible`, `.responsive`, `.no_state_change`, `.matches`, or `.applies`;
+- standard deliverables `code.patch` and `test.report`; and
+- unregistered `prefer` references, which are non-binding local preferences.
+
+These are reported as `local_contract_reference`, never as Core registration. A v0.2 bundle becomes `executionReady: true` only when its required task fields are present and every material reference is Core-resolved, explicitly declared, structurally resolved, locally contract-resolved, or backed by permitted evidence. `executionReady` is still a static contract assessment—not authorization to use tools, modify a repository, or perform the task.
+
+## Unregistered semantic markers
+
+The Runner does not discard a valid SemanticRef merely because core-v0.1 has no matching preset. It preserves the original reference and reports an `unregisteredReferences` entry with one conservative marker:
+
+- `extension.proper_noun` for explicit external names, UI specs, libraries, models, packages, or mixed-case/versioned names;
+- `extension.verb` for an unregistered `action`; or
+- `extension.noun` for other unregistered domain references.
+
+Markers are generic interpretation metadata, never aliases for a registered preset. They make a literal term available to a downstream agent or repository lookup without inventing meaning or authorizing execution. A structural relation such as `ui_spec.Name` or `bind` must still resolve to a real declaration in the same bundle.
+
+### Portable semantic definitions
+
+For a material domain term that needs to carry the same meaning to another Runner, use a v0.2 `semantic` block. It provides a portable extension manifest while keeping a clear distinction from the Core codebook. A semantic block may be nested in a `task` or `ui`, or be a top-level declaration shared by the entire bundle.
+
+```sil
+semantic CheckmateDetection {
+  reference: shogi.checkmate.detect
+  kind: domain_rule
+  meaning: Determine whether the side to move is in check with no legal move that removes the check.
+  scope: bundle
+}
+```
+
+Every semantic definition requires an exact `reference`, a `kind` (`proper_noun`, `verb`, `noun`, `domain_rule`, or `data_model`), a human-readable `meaning`, and a `scope` of `bundle` or `contract`. Bundle validation emits `semanticInteroperable: true` only when every unregistered task reference is either explicitly declared or resolved as a structural UI reference. It never upgrades a declared extension into a Core registration or execution authorization.
+
+### Evidence-backed enrichment
+
+For complex domains, a host may explicitly allow semantic enrichment from `repository`, `user`, or `web` evidence. The Runner records the source instead of treating the recovered term as Core codebook knowledge. A permitted Web result requires an HTTPS URL and resolves a reference as `web_resolved_extension`; repository or user evidence resolves it as `evidence_resolved_extension`.
+
+```bash
+sil validate game.bundle.sil \
+  --allow-web-enrichment \
+  --semantic-evidence-json '[
+    {
+      "reference":"domain.rule.example",
+      "meaning":"Precise, source-backed meaning of the rule.",
+      "source":"web",
+      "url":"https://authoritative.example/rules"
+    }
+  ]'
+```
+
+When evidence is absent, `researchRequests` lists the unresolved references and generic research questions. A network-capable host can pass these requests to `enrichSilSuiBundle`; the host is responsible for obtaining permission, choosing a search provider, and returning source-bearing evidence. The Runner never makes unaudited network requests itself, never fabricates citations, and never equates Web evidence with Core registration.
 
 ## Cardinality
 
@@ -51,6 +190,8 @@ Registered meanings use codebook tokens such as `G12`, `A01`, and `X01`. Lossles
 
 Codebook version mismatches are errors. Unknown codebook tokens are reported and never interpreted speculatively.
 
+Core v0.1 contains 10,000 deterministic English presets, divided evenly across the ten namespaces. The target namespace includes 100 curated technology entries with stable `T90000`–`T90099` codes, mirrored by classified context entries `I90000`–`I90099` in the input namespace. Existing seed tokens remain stable. Use `sil codebook search <query>` to discover registered keys and codes rather than guessing them.
+
 ## Diagnostics
 
 The validator reports:
@@ -63,3 +204,39 @@ The validator reports:
 - a reference that is both required and forbidden.
 
 Warnings do not block output. Errors mark a compilation invalid while keeping inspection data available when safe.
+
+## Validity and execution readiness
+
+SIL separates two questions that must not be conflated:
+
+- **Validity** asks whether the source can be parsed and represented safely as Semantic IR.
+- **Execution readiness** asks whether a coding agent has enough explicit information to act without inventing scope, deliverables, or success criteria.
+
+A task may therefore be `valid: true` and `executionReady: false`. Validity never authorizes execution.
+
+Readiness uses three statuses:
+
+| Status | Meaning |
+| --- | --- |
+| `blocked` | One or more execution-critical fields are missing, generic, invalid, or unresolved. Do not execute. |
+| `review` | No blocker is present, but optional context is missing and should be reviewed. |
+| `ready` | The static coding-agent contract is complete. This is still an analysis result, not an execution request. |
+
+The coding-agent readiness profile treats the following as blockers when applicable:
+
+- a missing or generic `goal`, `target`, or `action`,
+- a generic target such as `instruction.request`,
+- an unknown core reference that prevents reliable decoding,
+- no declared `output`,
+- no declared `verify` condition, or
+- invalid SIL diagnostics.
+
+Missing `input`, constraints (`require` or `forbid`), and `on_failure` handling are warnings. Each reported gap includes why it matters, the likely failure it causes, a suggested resolution, and a clarification question.
+
+The static failure forecast can report wrong-scope changes, undefined deliverables, false success, invented context, unbounded changes, partial state, and semantic decoding gaps. Producing this forecast does not execute the task or inspect a target repository.
+
+## CLI handoff contract
+
+`sil validate` returns structural diagnostics plus `executionReady` and the full readiness assessment. A zero exit code means structurally valid SIL; callers must inspect `executionReady` before treating it as actionable.
+
+`sil compile` emits a guarded OpenCode handoff by default. When readiness is blocked, it lists the missing interpretation-critical information, asks only required clarification questions, and requires `SIL_READINESS_BLOCKED` without calling tools or claiming completion. Missing deliverables, verification, optional context, or precise unregistered extensions produce `CONTINUE WITH REVIEW` instead: they remain explicit assumptions or pending verification and do not force a clarification-only stop. In either case, SIL itself never authorizes tools or external actions; the host must grant that permission separately. `sil compile --raw-prompt` retains access to the unguarded model-independent prompt for explicit low-level use.

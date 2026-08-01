@@ -4,6 +4,7 @@ import {
   type Codebook,
   type Diagnostic,
   type SemanticIR,
+  type StatementKind,
   type TaskAst,
 } from "../../semantic-ir/src/index";
 
@@ -23,6 +24,52 @@ const fieldNamespaces: Array<[keyof SemanticIR, string]> = [
 export interface ValidationResult {
   valid: boolean;
   diagnostics: Diagnostic[];
+}
+
+export type UnregisteredReferenceKind = "proper_noun" | "verb" | "noun";
+
+export interface UnregisteredSemanticMarker {
+  namespace: StatementKind;
+  reference: string;
+  marker: `extension.${UnregisteredReferenceKind}`;
+  kind: UnregisteredReferenceKind;
+  interpretation: string;
+}
+
+const properNameScope = /^(?:ui_spec|library|framework|platform|model|provider|service|component|package|plugin)\./u;
+
+/**
+ * Classifies unknown references without claiming that they equal a core preset.
+ * The original reference remains the source of truth and is preserved by the
+ * lossless quantizer; the marker gives a downstream runner a safe generic role.
+ */
+export function interpretUnregisteredReference(namespace: StatementKind, reference: string, codebook: Codebook): UnregisteredSemanticMarker | undefined {
+  if (findEntry(codebook, namespace, reference)) return undefined;
+  const properNoun = properNameScope.test(reference) || /[A-Z0-9]/u.test(reference);
+  const kind: UnregisteredReferenceKind = namespace === "action"
+    ? "verb"
+    : properNoun
+      ? "proper_noun"
+      : "noun";
+  const interpretation = kind === "verb"
+    ? "Unregistered operation; preserve its literal action and require an explicit definition before execution."
+    : kind === "proper_noun"
+      ? "Unregistered proper-name context; preserve its literal spelling and resolve it only from supplied contracts or repository context."
+      : "Unregistered domain noun; preserve it as lossless context without inferring an equivalent core preset.";
+  return { namespace, reference, marker: `extension.${kind}`, kind, interpretation };
+}
+
+export function interpretUnregisteredReferences(ir: SemanticIR, codebook: Codebook): UnregisteredSemanticMarker[] {
+  const markers: UnregisteredSemanticMarker[] = [];
+  for (const [field, namespace] of fieldNamespaces) {
+    const raw = ir[field];
+    const refs = typeof raw === "string" ? [raw] : Array.isArray(raw) ? raw : [];
+    for (const reference of refs) {
+      const marker = interpretUnregisteredReference(namespace as StatementKind, reference, codebook);
+      if (marker) markers.push(marker);
+    }
+  }
+  return markers;
 }
 
 export function validateAst(ast: TaskAst): Diagnostic[] {
@@ -91,10 +138,11 @@ export function validateIr(ir: SemanticIR, codebook: Codebook): ValidationResult
       }
       seen.add(ref);
       if (!findEntry(codebook, namespace, ref)) {
+        const marker = interpretUnregisteredReference(namespace as StatementKind, ref, codebook)!;
         diagnostics.push({
           severity: "warning",
           code: "unknown-reference",
-          message: `Unknown ${namespace} reference "${ref}" will be preserved in lossless mode.`,
+          message: `Unknown ${namespace} reference "${ref}" is marked ${marker.marker} and preserved in lossless mode. ${marker.interpretation}`,
           path: String(field),
         });
       }

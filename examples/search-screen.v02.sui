@@ -1,0 +1,30 @@
+ui SearchScreen {
+  version: 0.2
+  screen: search_screen
+  component: search_results
+  verify: render.complete
+  on_failure: task.abort
+
+  token spacing_md {
+    type: dimension
+    value: 16
+    unit: px
+  }
+
+  breakpoint compact {
+    min: 0
+    max: 767
+    unit: px
+  }
+
+  a11y search_results {
+    role: region
+    label: search_results
+  }
+
+  transition loading_to_results {
+    from: view.loading
+    event: request.success
+    to: view.success
+  }
+}

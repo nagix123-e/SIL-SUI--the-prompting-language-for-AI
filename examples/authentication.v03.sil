@@ -1,0 +1,116 @@
+# SIL/SUI v0.3 canonical indentation syntax. It is declarative data only.
+bundle AuthenticationFeature:
+    version: 0.3
+
+    contract:
+        id: AUTH_FEATURE
+        revision: 4
+        status: review
+        supersedes: AUTH_FEATURE@3
+        compatibility: backward_compatible
+        execution_authorized: false
+
+    task ImplementAuthenticationApi:
+        version: 0.3
+        goal: feature.add
+        target: auth.api
+        action: implement
+        output:
+            api.authentication
+        require REQ_PASSWORD_HASH:
+            on user.password:
+                rule: password.hash
+        verify:
+            tests.pass
+        on_failure:
+            task.abort
+
+    task ImplementLoginUi:
+        version: 0.3
+        goal: feature.add
+        target: auth.login_ui
+        action: implement
+        output:
+            ui.login_screen
+        verify:
+            tests.pass
+        on_failure:
+            task.abort
+
+    task VerifyAuthenticationFlow:
+        version: 0.3
+        goal: verification.run
+        target: auth.flow
+        action: validate
+        depends_on:
+            ImplementAuthenticationApi
+            ImplementLoginUi
+        output:
+            verification.report
+        verify:
+            tests.pass
+        on_failure:
+            task.abort
+
+    flow AuthenticationDelivery:
+        parallel:
+            ImplementAuthenticationApi
+            ImplementLoginUi
+        sequence:
+            ImplementLoginUi
+            VerifyAuthenticationFlow
+
+    ui LoginScreen:
+        version: 0.3
+        screen: login_screen
+        component LoginForm:
+            kind: form
+            component EmailInput:
+                kind: input
+                bind: input.user.email
+            component PasswordInput:
+                kind: password_input
+                bind: input.user.password
+            component SubmitButton:
+                kind: button
+                content: "Log in"
+                interaction:
+                    on click:
+                        action.authenticate
+                state:
+                    loading
+                    disabled
+
+    verification LoginSuccess:
+        applies_to: auth.session
+        method: integration_test
+        command_source: repository.package_scripts
+        observe: http.response
+        expected: status_code.200
+        evidence: test.report
+        unavailable_behavior: verification.report_unavailable
+
+    rule DeleteUserPermission:
+        subject: role.admin
+        action: user.delete
+        resource: user.account
+        when:
+            target.user_not_self
+            organization.same
+        effect: allow
+        exception:
+            account.last_owner
+
+    data_policy UserEmailPolicy:
+        data: user.email
+        classification: personal
+        readable_by:
+            role.admin
+        writable_by:
+            role.user_self
+        retention: account_lifetime
+        delete_on: account.deleted
+        masking: required
+        audit: metadata_only
+        external_transfer: forbidden
+        log_value: false
