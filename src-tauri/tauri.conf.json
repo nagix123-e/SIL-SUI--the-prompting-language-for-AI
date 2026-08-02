@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "SIL SUI File Editor",
+  "version": "0.4.1",
+  "identifier": "com.nagix.silsui.fileeditor",
+  "build": {
+    "beforeDevCommand": "npm run desktop:serve",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run desktop:frontend",
+    "frontendDist": "../desktop/dist"
+  },
+  "app": { "windows": [{ "label": "main", "title": "SIL/SUI File Editor", "width": 1100, "height": 760, "minWidth": 680, "minHeight": 540 }] },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "fileAssociations": [
+      { "ext": ["sil"], "name": "Semantic Instruction Language", "role": "Editor", "rank": "Owner", "mimeType": "text/plain", "exportedType": { "identifier": "com.nagix.silsui.sil", "conformsTo": ["public.plain-text"] } },
+      { "ext": ["sui"], "name": "Semantic UI Language", "role": "Editor", "rank": "Owner", "mimeType": "text/plain", "exportedType": { "identifier": "com.nagix.silsui.sui", "conformsTo": ["public.plain-text"] } }
+    ],
+    "macOS": { "minimumSystemVersion": "12.0" }
+  }
+}

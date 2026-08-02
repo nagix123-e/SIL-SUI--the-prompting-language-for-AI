@@ -148,6 +148,17 @@ npm run mcp -- serve
 
 This starts a token-protected Streamable HTTP MCP endpoint at `http://127.0.0.1:8765/mcp`, so multiple local agents can share one compiler. `npm run mcp -- config http` prints the standard connection object to paste into an agent's MCP settings. `npm run mcp -- config stdio` prints the fallback for agents that support only process-launched MCP. The server accepts inline source only and never executes a task described by SIL/SUI. See [portable-mcp/README.md](portable-mcp/README.md).
 
+## macOS `.sil` / `.sui` file editor
+
+`SIL SUI File Editor` is a local Tauri desktop application that registers itself as an **Editor** and **Owner** for `.sil` and `.sui` files. After it is installed in `/Applications`, double-clicking either file type in Finder launches the app and loads the UTF-8 source into its editor. Opening another contract while the app is running forwards that file to the existing window.
+
+```bash
+npm run desktop:dev
+npm run desktop:build
+```
+
+`desktop:build` creates the app at `src-tauri/target/release/bundle/macos/SIL SUI File Editor.app` and requests a DMG bundle. The editor has **Open**, **Save**, and **Save As** controls; it accepts only `.sil` / `.sui` UTF-8 text files up to 1 MB and does not execute their contents. The first unsigned local launch may require Finder's **Open** confirmation. Signing and notarization are intentionally separate release steps.
+
 One `.sil` source may also be a SIL/SUI bundle: one `task` plus multiple named `ui` declarations. The CLI validates each declaration and resolves `ui_spec.Name` inputs and v0.2 `bind` targets across the complete document, so related game screens and dialogs no longer need separate input files.
 
 ## SIL syntax

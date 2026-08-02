@@ -1,0 +1,15 @@
+[package]
+name = "sil-sui-file-editor"
+version = "0.4.1"
+description = "Local macOS editor for SIL and SUI contracts"
+authors = ["Nagix"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.5", features = [] }
+
+[dependencies]
+tauri = { version = "2.11", features = [] }
+tauri-plugin-dialog = "2.4"
+tauri-plugin-single-instance = "2.4"
+url = "2.5"
