@@ -5,14 +5,16 @@ This directory makes the local SIL/SUI compiler available to any MCP-capable age
 - **Streamable HTTP, JSON response mode** at `http://127.0.0.1:8765/mcp`, shared by several local agents.
 - **stdio**, for MCP clients that launch one local server process per agent.
 
-The server exposes `run_sil` and `search_sil_presets`. It parses, validates, formats, compiles, inspects, graphs, quantizes, patches in memory, and assesses evidence. It never executes a task described by SIL/SUI. It accepts inline `source` only; MCP clients cannot read arbitrary local files through it.
+The server exposes `run_sil` and `search_sil_presets`. It parses, validates, formats, compiles, inspects, graphs, prepares phase-orchestration reports, quantizes, patches in memory, and assesses evidence. It never executes a task described by SIL/SUI. It accepts inline `source` only; MCP clients cannot read arbitrary local files through it.
+
+Use `run_sil` with `command: "orchestrate"` to classify each v0.3/v0.4 task as ready, partial, or blocked without carrying out the task. Pass host-observed `observations` and prior `ledger` entries when available. Missing evidence is deferred by default; only an explicitly `dependency_kind: hard`, an unmet safety-critical/release requirement, or release without host authorization blocks a phase. The MCP server does not accept a workspace path and never performs repository discovery for a caller.
 
 ## Install from a GitHub release ZIP
 
 Requires Node.js 22.13 or newer and npm. After extracting the release ZIP:
 
 ```bash
-cd sil-sui-mcp-kit-v0.4.0
+cd sil-sui-mcp-kit-v0.4.1
 npm ci
 npm run mcp -- init
 npm run mcp -- serve

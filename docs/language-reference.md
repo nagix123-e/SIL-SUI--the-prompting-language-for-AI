@@ -240,3 +240,17 @@ The static failure forecast can report wrong-scope changes, undefined deliverabl
 `sil validate` returns structural diagnostics plus `executionReady` and the full readiness assessment. A zero exit code means structurally valid SIL; callers must inspect `executionReady` before treating it as actionable.
 
 `sil compile` emits a guarded OpenCode handoff by default. When readiness is blocked, it lists the missing interpretation-critical information, asks only required clarification questions, and requires `SIL_READINESS_BLOCKED` without calling tools or claiming completion. Missing deliverables, verification, optional context, or precise unregistered extensions produce `CONTINUE WITH REVIEW` instead: they remain explicit assumptions or pending verification and do not force a clarification-only stop. In either case, SIL itself never authorizes tools or external actions; the host must grant that permission separately. `sil compile --raw-prompt` retains access to the unguarded model-independent prompt for explicit low-level use.
+
+## Non-executing phase orchestration
+
+For v0.3/v0.4 bundles, `sil orchestrate` creates a machine-readable phase report without running the described work. It keeps the declarative contract separate from observed runtime state and prevents an unproven earlier phase from automatically stopping unrelated work.
+
+```bash
+sil orchestrate delivery.sil --mode discover --workspace . --report phase-report.json
+```
+
+Modes are `discover`, `repair`, `implement`, `verify`, and `release`. The command itself is always non-executing. `--workspace` performs only four read-only existence checks (`workspace.accessible`, `repository.package_json`, `repository.git`, and `repository.readme`); MCP clients instead provide already-observed facts through `observations`.
+
+Each phase is returned as `not_started`, `discovering`, `implementing`, `verifying`, `completed`, `partial`, `blocked`, or `deferred`. Missing evidence becomes a discovery request and yields `partial`, not a bundle-wide abort. A dependency is ordering-only by default; mark a task with `dependency_kind: hard` only when its incomplete ledger entry must prevent that particular phase from proceeding. `soft`, `evidence`, and `release` dependencies are recorded as deferrals. Release mode always requires separate host authorization.
+
+The output includes a phase ledger, evidence provenance, hard blockers, and deferred references. It is observed state, not SIL/SUI source: do not copy it into a contract as self-authored proof.

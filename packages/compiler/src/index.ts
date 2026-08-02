@@ -208,6 +208,20 @@ export type {
   VmExecutionResult,
   VmTraceEntry,
 } from "../../execution-result/src/index";
+export { orchestrateV03 } from "../../orchestrator/src/index";
+export type {
+  DependencyKind,
+  GateAssessment,
+  GateDisposition,
+  ObservationStatus,
+  OrchestrationMode,
+  OrchestrationOptions,
+  OrchestrationReport,
+  PhaseLedgerEntry,
+  PhasePlan,
+  PhaseStatus,
+  RuntimeObservation,
+} from "../../orchestrator/src/index";
 export { interpretUnregisteredReference, interpretUnregisteredReferences, validateIr } from "../../validator/src/index";
 export type { UnregisteredReferenceKind, UnregisteredSemanticMarker } from "../../validator/src/index";
 export { PROMPT_COLOR_CATEGORY } from "../../semantic-ir/src/index";

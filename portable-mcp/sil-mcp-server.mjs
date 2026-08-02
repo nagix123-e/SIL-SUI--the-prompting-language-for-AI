@@ -15,14 +15,14 @@ import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 
-const SERVER_VERSION = "0.4.0";
+const SERVER_VERSION = "0.4.1";
 const DEFAULT_PROTOCOL_VERSION = "2025-06-18";
 const SUPPORTED_PROTOCOL_VERSIONS = new Set(["2025-06-18", "2025-11-25"]);
 const MAX_SOURCE_LENGTH = 512_000;
 const MAX_QUERY_LENGTH = 500;
 const MAX_OUTPUT_LENGTH = 8_000_000;
 const MAX_HTTP_BODY_LENGTH = 1_000_000;
-const COMMANDS = new Set(["parse", "validate", "compile", "quantize", "dequantize", "format", "migrate", "graph", "patch", "inspect", "readiness", "assess-result"]);
+const COMMANDS = new Set(["parse", "validate", "compile", "quantize", "dequantize", "format", "migrate", "graph", "patch", "inspect", "readiness", "orchestrate", "assess-result"]);
 const NAMESPACES = new Set(["goal", "target", "action", "input", "output", "require", "prefer", "forbid", "verify", "on_failure"]);
 const kitRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const runtimeDirectory = path.resolve(process.env.SIL_MCP_RUNTIME_DIR || path.join(kitRoot, "portable-mcp", ".runtime"));
@@ -31,7 +31,7 @@ const runtimeConfigPath = path.join(runtimeDirectory, "local.json");
 const runSilTool = {
   name: "run_sil",
   title: "Run SIL/SUI compiler operation",
-  description: "Parse, validate, compile, format, migrate, inspect, graph, patch, quantify, and assess SIL/SUI v0.1-v0.4. This tool treats SIL/SUI as data and never executes the described task.",
+  description: "Parse, validate, compile, format, migrate, inspect, graph, prepare an orchestration report, patch, quantify, and assess SIL/SUI v0.1-v0.4. Orchestration is non-executing: it classifies hard blocks versus deferrals and never reads local files through MCP.",
   inputSchema: {
     type: "object",
     additionalProperties: false,
@@ -46,6 +46,9 @@ const runSilTool = {
       dryRun: { type: "boolean", default: false, description: "For patch, preview without replacing caller content." },
       evidence: { type: "array", description: "For assess-result, observed post-execution evidence. Agent self-report is insufficient." },
       capabilities: { type: "object", description: "For assess-result, environment capability map." },
+      mode: { type: "string", enum: ["discover", "repair", "implement", "verify", "release"], description: "For orchestrate, requested non-executing phase mode. Defaults to discover." },
+      observations: { type: "array", description: "For orchestrate, host-observed repository, test, artifact, runtime, user, or capability facts." },
+      ledger: { type: "array", description: "For orchestrate, prior phase-ledger entries. A contract never supplies these facts itself." },
       suiSource: { type: "string", maxLength: MAX_SOURCE_LENGTH, description: "For validation, optional companion SUI source." }
     },
     required: ["command", "source"]
@@ -108,6 +111,12 @@ function validateRunArguments(args) {
   if (args.command === "patch" && !Array.isArray(args.patch)) throw new Error("patch requires a Patch-operation array.");
   if (args.evidence !== undefined && args.command !== "assess-result") throw new Error("evidence is only valid with assess-result.");
   if (args.capabilities !== undefined && args.command !== "assess-result") throw new Error("capabilities is only valid with assess-result.");
+  if (args.mode !== undefined && args.command !== "orchestrate") throw new Error("mode is only valid with orchestrate.");
+  if (args.observations !== undefined && args.command !== "orchestrate") throw new Error("observations is only valid with orchestrate.");
+  if (args.ledger !== undefined && args.command !== "orchestrate") throw new Error("ledger is only valid with orchestrate.");
+  if (args.command === "orchestrate" && args.mode !== undefined && !["discover", "repair", "implement", "verify", "release"].includes(args.mode)) throw new Error("Unsupported orchestration mode.");
+  if (args.command === "orchestrate" && args.observations !== undefined && !Array.isArray(args.observations)) throw new Error("observations must be an array.");
+  if (args.command === "orchestrate" && args.ledger !== undefined && !Array.isArray(args.ledger)) throw new Error("ledger must be an array.");
   if (args.command === "assess-result" && !Array.isArray(args.evidence)) throw new Error("assess-result requires an evidence array.");
   if (args.suiSource !== undefined && args.command !== "validate") throw new Error("suiSource is only valid with validate.");
 }
@@ -151,6 +160,7 @@ async function runSil(args) {
   if (args.legacy) cliArgs.push("--legacy");
   if (args.command === "patch") { cliArgs.push("--patch-json", JSON.stringify(args.patch)); if (args.dryRun) cliArgs.push("--dry-run"); }
   if (args.command === "assess-result") { cliArgs.push("--evidence-json", JSON.stringify(args.evidence)); if (args.capabilities !== undefined) cliArgs.push("--capabilities-json", JSON.stringify(args.capabilities)); }
+  if (args.command === "orchestrate") { if (args.mode) cliArgs.push("--mode", args.mode); if (args.observations !== undefined) cliArgs.push("--observations-json", JSON.stringify(args.observations)); if (args.ledger !== undefined) cliArgs.push("--ledger-json", JSON.stringify(args.ledger)); }
   if (args.suiSource !== undefined) cliArgs.push("--sui-source", args.suiSource);
   return executeCli(cliArgs, args.source);
 }

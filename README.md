@@ -137,10 +137,10 @@ The repository can produce a GitHub-release-ready ZIP that any **MCP-capable** A
 npm run mcp:kit
 ```
 
-The artifact is written to `releases/sil-sui-mcp-kit-v0.4.0.zip`. On the receiving computer, extract it and run:
+The artifact is written to `releases/sil-sui-mcp-kit-v0.4.1.zip`. On the receiving computer, extract it and run:
 
 ```bash
-cd sil-sui-mcp-kit-v0.4.0
+cd sil-sui-mcp-kit-v0.4.1
 npm ci
 npm run mcp -- init
 npm run mcp -- serve

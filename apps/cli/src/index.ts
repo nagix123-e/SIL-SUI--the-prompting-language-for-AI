@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
+import { access, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
 import {
   compile,
   compileMultilingualNaturalLanguage,
@@ -40,6 +41,10 @@ import {
   applyV03Patch,
   allNodes,
   allStatements,
+  orchestrateV03,
+  type OrchestrationMode,
+  type PhaseLedgerEntry,
+  type RuntimeObservation,
   type StatementKind,
 } from "../../../packages/compiler/src/index";
 
@@ -55,6 +60,7 @@ Usage:
   sil patch <contract.sil> --patch <patch.json>|--patch-json <json> [--dry-run]
   sil inspect <contract.sil>
   sil readiness <contract.sil>
+  sil orchestrate <contract.sil> [--mode discover|repair|implement|verify|release] [--observations <evidence.json>|--observations-json <json>] [--ledger <phase-report.json>|--ledger-json <json>] [--workspace <directory>] [--report <phase-report.json>]
   sil quantize <task.sil> [--compact]
   sil dequantize <code|file.sq>
   sil assess-result <task.sil> --evidence <evidence.json>|--evidence-json <json> [--capabilities <capabilities.json>|--capabilities-json <json>]
@@ -74,6 +80,28 @@ async function readInput(value?: string): Promise<string> {
   if (value === "-") return readStdin();
   if (value.startsWith("@")) return value;
   return readFile(value, "utf8");
+}
+
+async function jsonOption(args: string[], pathFlag: string, jsonFlag: string): Promise<unknown | undefined> {
+  const inputPath = optionValue(args, pathFlag);
+  const inline = optionValue(args, jsonFlag);
+  if (inputPath && inline) throw new Error(`Provide only one of ${pathFlag} or ${jsonFlag}.`);
+  return inline ? JSON.parse(inline) : inputPath ? JSON.parse(await readInput(inputPath)) : undefined;
+}
+
+/** Read-only workspace facts used only by the non-executing orchestration preflight. */
+async function inspectWorkspace(workspace: string): Promise<Array<{ reference: string; status: "satisfied" | "unavailable"; source: "repository"; detail: string }>> {
+  const root = path.resolve(workspace);
+  const candidates = [
+    ["workspace.accessible", root],
+    ["repository.package_json", path.join(root, "package.json")],
+    ["repository.git", path.join(root, ".git")],
+    ["repository.readme", path.join(root, "README.md")],
+  ] as const;
+  return Promise.all(candidates.map(async ([reference, target]) => {
+    try { await access(target); return { reference, status: "satisfied" as const, source: "repository" as const, detail: target }; }
+    catch { return { reference, status: "unavailable" as const, source: "repository" as const, detail: target }; }
+  }));
 }
 
 async function main(): Promise<void> {
@@ -262,6 +290,28 @@ async function main(): Promise<void> {
     case "readiness": {
       if (!isV03) throw new Error("readiness currently requires a v0.3 or v0.4 Pythonic contract.");
       console.log(JSON.stringify(validateV03(parseV03(source)).readiness, null, 2)); return;
+    }
+    case "orchestrate": {
+      if (!isV03) throw new Error("orchestrate currently requires a v0.3 or v0.4 Pythonic contract.");
+      const mode = optionValue(flags, "--mode") ?? "discover";
+      if (!['discover', 'repair', 'implement', 'verify', 'release'].includes(mode)) throw new Error("--mode must be discover, repair, implement, verify, or release.");
+      const observations = await jsonOption(flags, "--observations", "--observations-json");
+      const ledger = await jsonOption(flags, "--ledger", "--ledger-json");
+      if (observations !== undefined && !Array.isArray(observations)) throw new Error("Observations must be a JSON array.");
+      if (ledger !== undefined && !Array.isArray(ledger)) throw new Error("Phase ledger must be a JSON array.");
+      const workspace = optionValue(flags, "--workspace");
+      const workspaceObservations = workspace ? await inspectWorkspace(workspace) : [];
+      const report = orchestrateV03(parseV03(source), {
+        mode: mode as OrchestrationMode,
+        observations: [...workspaceObservations, ...(observations ?? [])] as RuntimeObservation[],
+        ledger: ledger as PhaseLedgerEntry[] | undefined,
+        hostAuthorized: false,
+      });
+      const reportPath = optionValue(flags, "--report");
+      if (reportPath) await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+      console.log(JSON.stringify({ ...report, reportPath: reportPath ?? null }, null, 2));
+      if (report.summary.status === "blocked") process.exitCode = 2;
+      return;
     }
     case "patch": {
       if (!isV03) throw new Error("patch currently requires a v0.3 or v0.4 Pythonic contract.");
