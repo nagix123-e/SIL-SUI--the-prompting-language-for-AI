@@ -228,6 +228,7 @@ export { PROMPT_COLOR_CATEGORY } from "../../semantic-ir/src/index";
 export {
   V03_VERSION,
   V04_VERSION,
+  V05_VERSION,
   CURRENT_V0X_VERSION,
   V03SyntaxError,
   allItems,
@@ -263,6 +264,7 @@ export type {
   V03Statement,
   V03SyntaxStyle,
   V03Validation,
+  V03UiDesignProfile,
 } from "../../v03/src/index";
 export type {
   SemanticIR,

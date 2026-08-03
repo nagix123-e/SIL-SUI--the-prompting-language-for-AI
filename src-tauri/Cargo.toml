@@ -1,6 +1,6 @@
 [package]
 name = "sil-sui-file-editor"
-version = "0.4.1"
+version = "0.5.0"
 description = "Local macOS editor for SIL and SUI contracts"
 authors = ["Nagix"]
 edition = "2021"

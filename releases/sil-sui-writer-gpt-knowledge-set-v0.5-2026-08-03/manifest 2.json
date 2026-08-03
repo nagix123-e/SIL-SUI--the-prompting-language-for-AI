@@ -1,0 +1,102 @@
+{
+  "package": "SIL/SUI Writer GPT Knowledge Set",
+  "languageVersion": "0.5",
+  "silVersion": "0.1",
+  "buildDate": "2026-08-03",
+  "naturalLanguage": "multilingual-to-en",
+  "knowledgeFiles": 15,
+  "codebookEntries": 10000,
+  "technicalTerms": 100,
+  "contents": [
+    {
+      "path": "README.md",
+      "bytes": 736,
+      "sha256": "77c202d4142b3cedc61ea3cceac13e37fb14aec59c577b01c4f95434e2fec937"
+    },
+    {
+      "path": "SYSTEM-INSTRUCTIONS.txt",
+      "bytes": 6260,
+      "sha256": "ce6511525f699035cc3488a74246ed1dafa7881f8a53880a123865cd621db8ae"
+    },
+    {
+      "path": "data/core-v0.1.json",
+      "bytes": 3202022,
+      "sha256": "910164fe32c5ab468962819617520cecaa969bab6e3eef0c3dc94fa9c8976325"
+    },
+    {
+      "path": "knowledge/00-knowledge-set-index.md",
+      "bytes": 3100,
+      "sha256": "7e375f31edde43c763364d9421d00e36b9a9a2cdc160ad5b77909f3fdaeaffd2"
+    },
+    {
+      "path": "knowledge/01-sil-language-specification.md",
+      "bytes": 5557,
+      "sha256": "d0e315fa0c93bd81ccea8988f50726806bcfa9a78a0e0f50e000b2dc6c0185d6"
+    },
+    {
+      "path": "knowledge/02-semantic-ir-and-atoms.md",
+      "bytes": 4984,
+      "sha256": "3c8373dbf9ed178a410a548a1834a7690f481463cf9ad2678074813eba839bba"
+    },
+    {
+      "path": "knowledge/03-natural-language-conversion-policy.md",
+      "bytes": 6464,
+      "sha256": "05f99a8d5babb2fc8ce1a62847c3eef3f5e75e3af95017bf1ea9db7b5c4a39aa"
+    },
+    {
+      "path": "knowledge/04-sil-examples.md",
+      "bytes": 5278,
+      "sha256": "12f2b0a93a737d27a273664fee0f0849ccac7ab289b44aca03cfc999c6485526"
+    },
+    {
+      "path": "knowledge/05-quality-and-output-rules.md",
+      "bytes": 5020,
+      "sha256": "89cde99f706e1c262940e2545a6d5c6e21be4383bc530da2f1374422673057de"
+    },
+    {
+      "path": "knowledge/06-technical-terms-and-proper-nouns.md",
+      "bytes": 4541,
+      "sha256": "fce59cd05f698e206242e7b29d9bf633fbcc7a47dfe5ee1ef70be9780ec32551"
+    },
+    {
+      "path": "knowledge/07-readiness-validation-and-cli.md",
+      "bytes": 4307,
+      "sha256": "3e281f3db81988fd62b596b0c8c4336b8425ad7f27e39155ed8821b592272a2a"
+    },
+    {
+      "path": "knowledge/08-deterministic-conversion-rule-inventory.md",
+      "bytes": 6952,
+      "sha256": "aa8df3ca0b34a0f4f8144f14994bb2ac43ef482098236db81fdc8f2e4b12807a"
+    },
+    {
+      "path": "knowledge/09-indented-sil-output.md",
+      "bytes": 1129,
+      "sha256": "acffb37cc879d06e53cecfd357a3e06145cef4c93e13fd6dfb73f2b60d645056"
+    },
+    {
+      "path": "knowledge/10-sui-language-specification.md",
+      "bytes": 3503,
+      "sha256": "15ce3f2a3d8420985b035c6751deeea4adcd80e6945cc74a342f2f50df15456e"
+    },
+    {
+      "path": "knowledge/11-v0.2-typed-contracts-and-ui-bindings.md",
+      "bytes": 7570,
+      "sha256": "8dab080872afa281f099b41d568a522bd224fdd34a893edc589289f79453fcc1"
+    },
+    {
+      "path": "knowledge/12-v0.3-pythonic-contracts.md",
+      "bytes": 7638,
+      "sha256": "ac20b11b79fd6f9e7cd7274e11b5bb20c02c7acf4ba8ef6dfc584be3eab7500c"
+    },
+    {
+      "path": "knowledge/13-v0.4-bounded-loops.md",
+      "bytes": 2970,
+      "sha256": "5f949c62e08bcab3ba305deb6f02a3b2fed54886daa9a8d38fcfb1ebd9203192"
+    },
+    {
+      "path": "knowledge/14-v0.5-ui-layers-and-continuation.md",
+      "bytes": 3560,
+      "sha256": "70b44df08fa07b30f00925d525c16ec0cd54f2fe5bb4f0c4a4a0bc3e0f7c3aee"
+    }
+  ]
+}

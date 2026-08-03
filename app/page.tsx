@@ -74,42 +74,39 @@ type BlockLibraryMode = "prompt" | "sui";
 type MobileWorkspace = "compose" | "source" | "results";
 const DEFAULT_RESULTS_HEIGHT = 420;
 
-const sampleSui = `ui PromptEditor {
-  version: 0.2
-  screen: prompt_editor
-  layout: sidebar.left_third
-  layout: editor.center
-  component: prompt_block_library
-  component: english_prompt_editor
-  interaction: block.click_insert_at_caret
-  interaction: block.drag_drop_insert
-  constraint: sidebar.collapsible
-  verify: drag_drop.inserts_at_drop_caret
-  on_failure: task.abort
-
-  token sidebar_width {
-    type: percentage
-    value: 33
-    unit: percent
-  }
-
-  breakpoint compact {
-    min: 0
-    max: 767
-    unit: px
-  }
-
-  a11y prompt_block_library {
-    role: list
-    label: prompt_block_library
-  }
-
-  transition sidebar_collapse {
-    from: sidebar.expanded
-    event: button.click
-    to: sidebar.collapsed
-  }
-}`;
+const sampleSui = `ui PromptEditor:
+    version: 0.5
+    screen: prompt_editor
+    component PromptBlocks:
+        kind: prompt_block_library
+    component PromptInput:
+        kind: input.textarea
+    interaction InsertBlock:
+        event: block.click_insert_at_caret
+    design Foundation:
+        token: color.category_coded
+        token: spacing.comfortable
+    responsive Compact:
+        strategy: reflow.stack
+    accessibility Baseline:
+        require: keyboard.complete
+        require: screen_reader.labels
+    navigation EditorFlow:
+        behavior: focus.restore
+    binding PromptState:
+        source: state.prompt_editor
+    data PromptModel:
+        model: prompt.document
+    state:
+        view.default
+        view.error
+    verify:
+        click.inserts_at_current_caret
+        drag_drop.inserts_at_drop_caret
+    on_failure:
+        ui.show_error_state
+        diagnostics.preserve
+`;
 
 const sampleSilV02 = `task BuildPromptEditor {
   version: 0.2
@@ -741,7 +738,7 @@ export default function Home() {
 
   const validateSil = useCallback(() => {
     const source = editorLanguage === "sui" ? suiDraft : silDraft;
-    if (/^\s*version:\s*0\.(?:3|4)\s*$/mu.test(source)) {
+    if (/^\s*version:\s*0\.(?:3|4|5)\s*$/mu.test(source)) {
       try {
         const document = parseV03(source);
         const validation = validateV03(document);
@@ -852,7 +849,7 @@ export default function Home() {
       return;
     }
     let restored: CompilationResult | null = null;
-    if (/^\s*version:\s*0\.(?:3|4)\s*$/mu.test(generatedSil)) {
+    if (/^\s*version:\s*0\.(?:3|4|5)\s*$/mu.test(generatedSil)) {
       try {
         const validation = validateV03(parseV03(generatedSil));
         if (!validation.valid) { announce("The generated SIL could not be restored.", "error"); return; }
@@ -956,12 +953,12 @@ export default function Home() {
         : suiDiagnostics.length
           ? { label: "SUI valid · review warnings", className: "pending" }
           : { label: "SUI valid", className: "valid" }
-    : /^\s*version:\s*0\.(?:3|4)\s*$/mu.test(silDraft)
+    : /^\s*version:\s*0\.(?:3|4|5)\s*$/mu.test(silDraft)
       ? silDiagnostics.some((item) => item.severity === "error")
-        ? { label: "SIL/SUI v0.3/v0.4 validation failed", className: "invalid" }
+        ? { label: "SIL/SUI v0.3–v0.5 validation failed", className: "invalid" }
         : silIsDirty
-          ? { label: "SIL/SUI v0.3/v0.4 not validated", className: "pending" }
-          : { label: "SIL/SUI v0.3/v0.4 valid", className: "valid" }
+          ? { label: "SIL/SUI v0.3–v0.5 not validated", className: "pending" }
+          : { label: "SIL/SUI v0.3–v0.5 valid", className: "valid" }
     : /^\s*version:\s*0\.2\s*$/mu.test(silDraft)
       ? silDiagnostics.some((item) => item.severity === "error")
         ? { label: "SIL v0.2 validation failed", className: "invalid" }
@@ -990,9 +987,9 @@ export default function Home() {
           <div>
             <div className="brand-line">
               <strong>SIL/SUI Local Converter</strong>
-              <span className="version-pill">v0.4</span>
+              <span className="version-pill">v0.5</span>
             </div>
-            <p>Static prompt analysis → SIL/SUI v0.4 → guarded OpenCode handoff</p>
+            <p>Static prompt analysis → SIL/SUI v0.5 → guarded OpenCode handoff</p>
           </div>
         </div>
         <div className="header-meta">
@@ -1386,9 +1383,9 @@ export default function Home() {
             <div className="source-language-toggle" role="tablist" aria-label="Source language">
               <button type="button" role="tab" aria-selected={editorLanguage === "sil"} className={editorLanguage === "sil" ? "active" : ""} onClick={() => setEditorLanguage("sil")}>SIL task</button>
               <button type="button" role="tab" aria-selected={editorLanguage === "sui"} className={editorLanguage === "sui" ? "active" : ""} onClick={() => setEditorLanguage("sui")}>SUI layout</button>
-              <button type="button" onClick={() => { setEditorLanguage("sil"); setSilDraft(sampleSilV04); setSilDiagnostics([]); announce("SIL v0.4 template loaded."); }}>Load SIL v0.4</button>
+              <button type="button" onClick={() => { setEditorLanguage("sil"); setSilDraft(sampleSilV04.replace("version: 0.4", "version: 0.5")); setSilDiagnostics([]); announce("SIL v0.5 template loaded."); }}>Load SIL v0.5</button>
               <button type="button" onClick={() => { setEditorLanguage("sil"); setSilDraft(sampleSilV02); setSilDiagnostics([]); announce("SIL v0.2 template loaded."); }}>Load SIL v0.2</button>
-              <button type="button" onClick={() => { setEditorLanguage("sui"); setSuiDraft(sampleSui); setSuiDiagnostics([]); announce("SUI v0.2 template loaded."); }}>Load SUI v0.2</button>
+              <button type="button" onClick={() => { setEditorLanguage("sui"); setSuiDraft(sampleSui); setSuiDiagnostics([]); announce("SUI v0.5 template loaded."); }}>Load SUI v0.5</button>
             </div>
             <div className="sil-editor-stack">
               <pre className="sil-highlight-layer" aria-hidden="true">

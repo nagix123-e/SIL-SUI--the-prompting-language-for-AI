@@ -6,7 +6,7 @@ import { TECHNICAL_TERMS, coreCodebook } from "../packages/codebook/src/index";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const releaseDirectory = fileURLToPath(new URL("../releases/", import.meta.url));
-const packageName = "sil-sui-writer-gpt-knowledge-set-v0.4-2026-07-31";
+const packageName = "sil-sui-writer-gpt-knowledge-set-v0.5-2026-08-03";
 const packageDirectory = `${releaseDirectory}${packageName}`;
 const zipPath = `${releaseDirectory}${packageName}.zip`;
 
@@ -50,9 +50,9 @@ const files = await Promise.all(contents.map(async (relativePath) => {
 
 const manifest = {
   package: "SIL/SUI Writer GPT Knowledge Set",
-  languageVersion: "0.4",
+  languageVersion: "0.5",
   silVersion: coreCodebook.version,
-  buildDate: "2026-07-31",
+  buildDate: "2026-08-03",
   naturalLanguage: "multilingual-to-en",
   knowledgeFiles: knowledgeFiles.length,
   codebookEntries: coreCodebook.entries.length,

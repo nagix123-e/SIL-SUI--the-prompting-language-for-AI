@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SIL/SUI File Editor</title>
+    <script type="module" crossorigin src="/assets/index-BzQ_iS5J.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BfY-kvvo.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header>
+        <div class="brand"><img src="/sil-logo.png" alt="" /><div><h1>SIL/SUI File Editor</h1><p>Local macOS editor for .sil and .sui contracts</p></div></div>
+        <div class="actions"><button id="open-file" type="button">Open…</button><button id="save-file" type="button" class="primary">Save</button><button id="save-as-file" type="button">Save As…</button></div>
+      </header>
+      <section class="document-bar"><span id="file-name">No file open</span><span id="document-state">Open a .sil or .sui file from Finder or this window.</span></section>
+      <section class="editor-area"><textarea id="source" aria-label="SIL or SUI source" spellcheck="false" placeholder="Open a .sil file, or write a SIL/SUI contract here…"></textarea></section>
+      <footer><span id="status" role="status">Ready. Files stay on this Mac.</span><span>.sil · .sui · UTF-8 · 1 MB maximum</span></footer>
+    </main>
+  </body>
+</html>

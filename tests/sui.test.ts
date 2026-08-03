@@ -25,11 +25,12 @@ describe("SUI DSL", () => {
     expect(generateSuiPrompt(ir)).toContain("Interactions");
   });
 
-  it("provides legacy fields plus a bounded render_each SUI editor template", () => {
-    expect(SUI_BLOCKS).toHaveLength(201);
+  it("provides legacy fields, v0.5 design layers, and a bounded render_each template", () => {
+    expect(SUI_BLOCKS).toHaveLength(261);
     for (const field of SUI_BLOCK_FIELDS) {
-      expect(SUI_BLOCKS.filter((block) => block.field === field)).toHaveLength(field === "render_each" ? 1 : 20);
+      expect(SUI_BLOCKS.filter((block) => block.field === field)).toHaveLength(field === "render_each" ? 1 : ["design", "responsive", "accessibility", "navigation", "binding", "data"].includes(field) ? 10 : 20);
     }
     expect(SUI_BLOCKS.find((block) => block.field === "render_each")?.insertText).toContain("max_items: 100");
+    expect(SUI_BLOCKS.find((block) => block.field === "accessibility")?.insertText).toContain("accessibility");
   });
 });

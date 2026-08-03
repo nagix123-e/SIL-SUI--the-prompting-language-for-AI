@@ -161,6 +161,31 @@ value = input * factor
     ]));
   });
 
+  it("supports v0.5 UI design layers while keeping incomplete UI coverage advisory", () => {
+    const document = parseV03(`ui AccountSettings:
+    version: 0.5
+    screen: account_settings
+    component SettingsForm:
+        kind: form
+    design Foundation:
+        token: color.semantic
+        token: spacing.scale
+    responsive Compact:
+        strategy: reflow.stack
+    accessibility Baseline:
+        require: keyboard.complete
+    navigation SaveFlow:
+        behavior: route.back
+    binding SettingsState:
+        source: state.account_settings
+    data SettingsModel:
+        model: account.settings
+`);
+    const validation = validateV03(document);
+    expect(validation.valid).toBe(true);
+    expect(validation.uiDesignProfiles).toEqual([expect.objectContaining({ ui: "AccountSettings", designTokens: true, responsive: true, accessibility: true, navigation: true, dataBinding: true })]);
+  });
+
   it("rejects unbounded and legacy-version loop declarations", () => {
     const document = parseV03(`task InvalidLoop:
     version: 0.3

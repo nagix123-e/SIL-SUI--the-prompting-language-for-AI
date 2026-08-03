@@ -15,7 +15,7 @@ import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 
-const SERVER_VERSION = "0.4.1";
+const SERVER_VERSION = "0.5.0";
 const DEFAULT_PROTOCOL_VERSION = "2025-06-18";
 const SUPPORTED_PROTOCOL_VERSIONS = new Set(["2025-06-18", "2025-11-25"]);
 const MAX_SOURCE_LENGTH = 512_000;
@@ -31,7 +31,7 @@ const runtimeConfigPath = path.join(runtimeDirectory, "local.json");
 const runSilTool = {
   name: "run_sil",
   title: "Run SIL/SUI compiler operation",
-  description: "Parse, validate, compile, format, migrate, inspect, graph, prepare an orchestration report, patch, quantify, and assess SIL/SUI v0.1-v0.4. Orchestration is non-executing: it classifies hard blocks versus deferrals and never reads local files through MCP.",
+  description: "Parse, validate, compile, format, migrate, inspect, graph, prepare an orchestration report, patch, quantify, and assess SIL/SUI v0.1-v0.5. Unregistered but precise references continue with review rather than blocking a valid contract. Orchestration is non-executing and never reads local files through MCP.",
   inputSchema: {
     type: "object",
     additionalProperties: false,

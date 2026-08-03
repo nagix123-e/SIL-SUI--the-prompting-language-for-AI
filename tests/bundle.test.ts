@@ -50,7 +50,7 @@ describe("SIL/SUI bundles", () => {
     const bundle = parseSilSuiBundle(shogiBundle);
     expect(bundle.task?.name).toBe("BuildShogiGame");
     expect(bundle.uis.map((ui) => ui.name)).toEqual(["ShogiGameScreen", "PromotionDialog", "GameResultDialog"]);
-    expect(validateSilSuiBundle(shogiBundle)).toMatchObject({ valid: true, executionReady: false });
+    expect(validateSilSuiBundle(shogiBundle)).toMatchObject({ valid: true, executionReady: true, semanticInteroperable: false, continuation: "continue_with_review" });
   });
 
   it("keeps the strict single-contract v0.2 parser unchanged", () => {

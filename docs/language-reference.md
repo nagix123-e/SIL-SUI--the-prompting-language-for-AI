@@ -1,6 +1,6 @@
-# SIL/SUI language reference · v0.4
+# SIL/SUI language reference · v0.5
 
-v0.4 is the canonical indentation-sensitive syntax; v0.1/v0.2 brace syntax and v0.3 contracts remain compatible. Natural-language input may be multilingual (including Japanese), but semantic identifiers are normalized to English through a configured adapter and the original language is retained in provenance. A Runner must report an unavailable adapter rather than silently translating or executing input. See [the v0.4 bounded-loop specification](../gpt-knowledge/13-v0.4-bounded-loops.md) for loop grammar and the v0.3 specification for the shared contract model.
+v0.5 is the canonical indentation-sensitive syntax; v0.1/v0.2 brace syntax and v0.3/v0.4 contracts remain compatible. Natural-language input may be multilingual (including Japanese), but semantic identifiers are normalized to English through a configured adapter and the original language is retained in provenance. A Runner must report an unavailable adapter rather than silently translating or executing input. See [the v0.5 UI layer and continuation specification](../gpt-knowledge/14-v0.5-ui-layers-and-continuation.md) and [the v0.4 bounded-loop specification](../gpt-knowledge/13-v0.4-bounded-loops.md).
 
 ## Natural-language prompt form
 
@@ -107,7 +107,7 @@ Not every meaningful reference needs a Core entry or a separate semantic declara
 - standard deliverables `code.patch` and `test.report`; and
 - unregistered `prefer` references, which are non-binding local preferences.
 
-These are reported as `local_contract_reference`, never as Core registration. A v0.2 bundle becomes `executionReady: true` only when its required task fields are present and every material reference is Core-resolved, explicitly declared, structurally resolved, locally contract-resolved, or backed by permitted evidence. `executionReady` is still a static contract assessment—not authorization to use tools, modify a repository, or perform the task.
+These are reported as `local_contract_reference`, never as Core registration. A v0.2 bundle becomes `executionReady: true` when its required task fields are present. Unregistered precise terms remain in `unregisteredReferences`, make `semanticInteroperable: false`, and produce `continuation: "continue_with_review"`; they do not by themselves stop a static handoff. `executionReady` is still a static contract assessment—not authorization to use tools, modify a repository, or perform the task.
 
 ## Unregistered semantic markers
 
@@ -118,6 +118,10 @@ The Runner does not discard a valid SemanticRef merely because core-v0.1 has no 
 - `extension.noun` for other unregistered domain references.
 
 Markers are generic interpretation metadata, never aliases for a registered preset. They make a literal term available to a downstream agent or repository lookup without inventing meaning or authorizing execution. A structural relation such as `ui_spec.Name` or `bind` must still resolve to a real declaration in the same bundle.
+
+## SUI v0.5 design layers
+
+New `ui` contracts can record six explicit, non-executable layers: `design` for tokens and visual foundations, `responsive` for breakpoints and reflow, `accessibility` for keyboard/semantics/contrast, `navigation` for route and dialog behavior, `binding` for explicit UI-to-state correspondence, and `data` for view-model and field shape. The Runner returns a `uiDesignProfiles` advisory report for each UI. A missing layer produces a review warning only; a bounded static UI does not become invalid merely because a layer is irrelevant.
 
 ### Portable semantic definitions
 
@@ -243,7 +247,7 @@ The static failure forecast can report wrong-scope changes, undefined deliverabl
 
 ## Non-executing phase orchestration
 
-For v0.3/v0.4 bundles, `sil orchestrate` creates a machine-readable phase report without running the described work. It keeps the declarative contract separate from observed runtime state and prevents an unproven earlier phase from automatically stopping unrelated work.
+For v0.3/v0.4/v0.5 bundles, `sil orchestrate` creates a machine-readable phase report without running the described work. It keeps the declarative contract separate from observed runtime state and prevents an unproven earlier phase from automatically stopping unrelated work.
 
 ```bash
 sil orchestrate delivery.sil --mode discover --workspace . --report phase-report.json

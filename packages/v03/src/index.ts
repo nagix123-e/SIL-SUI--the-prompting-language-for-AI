@@ -8,11 +8,12 @@ import type { Diagnostic, SemanticIR, StatementKind } from "../../semantic-ir/sr
  */
 export const V03_VERSION = "0.3";
 export const V04_VERSION = "0.4";
-export const CURRENT_V0X_VERSION = V04_VERSION;
-export type V0xVersion = typeof V03_VERSION | typeof V04_VERSION;
+export const V05_VERSION = "0.5";
+export const CURRENT_V0X_VERSION = V05_VERSION;
+export type V0xVersion = typeof V03_VERSION | typeof V04_VERSION | typeof V05_VERSION;
 export type V03SyntaxStyle = "pythonic" | "legacy";
 export type V03ProvenanceKind = "user_explicit" | "user_inferred" | "defaulted" | "repository_observed" | "document_observed" | "knowledge_observed" | "externally_verified";
-export type V03NodeKind = "task" | "ui" | "bundle" | "contract" | "metadata" | "readiness" | "flow" | "sequence" | "parallel" | "depends_on" | "parameter" | "model" | "field" | "component" | "semantic" | "example" | "token" | "breakpoint" | "a11y" | "transition" | "rule" | "data_policy" | "verification" | "interaction" | "state" | "when" | "condition" | "exception" | "for_each" | "repeat" | "until" | "render_each" | "body" | "group";
+export type V03NodeKind = "task" | "ui" | "bundle" | "contract" | "metadata" | "readiness" | "flow" | "sequence" | "parallel" | "depends_on" | "parameter" | "model" | "field" | "component" | "semantic" | "example" | "token" | "breakpoint" | "a11y" | "transition" | "navigation" | "binding" | "data" | "design" | "responsive" | "accessibility" | "rule" | "data_policy" | "verification" | "interaction" | "state" | "when" | "condition" | "exception" | "for_each" | "repeat" | "until" | "render_each" | "body" | "group";
 
 export interface V03Location { line: number; column: number; endLine?: number; }
 export interface V03Provenance {
@@ -76,7 +77,18 @@ export interface V03Validation {
   localContractReferences: string[];
   loops: V03LoopSpec[];
   declaredExtensions: string[];
+  /** Advisory UI coverage; omissions are review items, never syntax failures. */
+  uiDesignProfiles: V03UiDesignProfile[];
   executionAuthorization: { declared: boolean; staticAuthorization: false; reason: string };
+}
+export interface V03UiDesignProfile {
+  ui: string;
+  designTokens: boolean;
+  responsive: boolean;
+  accessibility: boolean;
+  navigation: boolean;
+  dataBinding: boolean;
+  states: boolean;
 }
 export interface V03LoopSpec {
   id: string;
@@ -99,7 +111,7 @@ export interface V03ReadinessProfile {
   overall: number;
   /** Host authorization remains false: a valid contract never authorizes tools by itself. */
   safeToExecute: false;
-  /** Valid v0.3/v0.4 data may be interpreted and planned without a clarification-only stop. */
+  /** Valid v0.3/v0.4/v0.5 data may be interpreted and planned without a clarification-only stop. */
   continuation: "blocked" | "continue_with_review";
   canContinue: boolean;
 }
@@ -110,7 +122,7 @@ export class V03SyntaxError extends Error {
   }
 }
 
-const nodeKinds = new Set<V03NodeKind>(["task", "ui", "bundle", "contract", "metadata", "readiness", "flow", "sequence", "parallel", "depends_on", "parameter", "model", "field", "component", "semantic", "example", "token", "breakpoint", "a11y", "transition", "rule", "data_policy", "verification", "interaction", "state", "when", "condition", "exception", "for_each", "repeat", "until", "render_each", "body"]);
+const nodeKinds = new Set<V03NodeKind>(["task", "ui", "bundle", "contract", "metadata", "readiness", "flow", "sequence", "parallel", "depends_on", "parameter", "model", "field", "component", "semantic", "example", "token", "breakpoint", "a11y", "transition", "navigation", "binding", "data", "design", "responsive", "accessibility", "rule", "data_policy", "verification", "interaction", "state", "when", "condition", "exception", "for_each", "repeat", "until", "render_each", "body"]);
 const semanticFields = new Set<StatementKind>(["goal", "target", "action", "input", "output", "require", "prefer", "forbid", "verify", "on_failure"]);
 const identifier = /^[A-Za-z][A-Za-z0-9_]*$/u;
 const reference = /^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)*$/u;
@@ -254,12 +266,14 @@ export function parseV03(source: string): V03Document {
     return items;
   };
   const nodes = parseItems(0).filter((item): item is V03Node => item.type === "node");
-  if (!nodes.length) throw new V03SyntaxError("Expected a v0.3 task, ui, or bundle declaration", 1);
-  if (nodes.some((node) => !["task", "ui", "bundle", "model", "semantic", "parameter", "rule", "data_policy", "verification"].includes(node.kind))) throw new V03SyntaxError("Top-level declaration must be task, ui, bundle, or a named specification", nodes[0].location.line);
+  if (!nodes.length) throw new V03SyntaxError("Expected a v0.3, v0.4, or v0.5 declaration", 1);
+  // New declaration families are inert data by default.  A future authoring
+  // tool must not be forced to rewrite a valid envelope solely because this
+  // Runner has not assigned a specialised IR node to it yet.
   const language = sourceLanguage(source);
   const versions = allItems({ type: "node", id: "ROOT", kind: "group", sourceOrder: -1, location: loc(1), provenance: defaultProvenance, items: nodes }).filter((item): item is V03Statement => item.type === "statement" && item.field === "version").map((statement) => statement.value);
-  const detectedVersion = versions.find((value): value is V0xVersion => value === V03_VERSION || value === V04_VERSION);
-  if (!detectedVersion) throw new V03SyntaxError("A v0.3 or v0.4 document must declare version: 0.3 or version: 0.4", nodes[0].location.line);
+  const detectedVersion = versions.find((value): value is V0xVersion => value === V03_VERSION || value === V04_VERSION || value === V05_VERSION);
+  if (!detectedVersion) throw new V03SyntaxError("A v0.3, v0.4, or v0.5 document must declare version: 0.3, 0.4, or 0.5", nodes[0].location.line);
   const document: V03Document = { version: detectedVersion, syntaxStyle: "pythonic", nodes, comments: prepared.comments, sourceMetadata: { originalSourceLanguage: language, normalizedSemanticLanguage: "en", outputIdentifierLanguage: "en", normalizationStatus: language === "en" ? "native_en" : "adapter_unavailable" } };
   return document;
 }
@@ -408,8 +422,8 @@ function validateLoops(document: V03Document): { loops: V03LoopSpec[]; diagnosti
   const diagnostics: Diagnostic[] = []; const loops: V03LoopSpec[] = [];
   for (const node of allNodes(document).filter((candidate) => loopKinds.has(candidate.kind as V03LoopSpec["kind"]))) {
     const kind = node.kind as V03LoopSpec["kind"];
-    if (document.version !== V04_VERSION) {
-      diagnostics.push(diag("error", "loop-version-unsupported", `${kind} requires version: 0.4.`, node.location.line));
+    if (document.version !== V04_VERSION && document.version !== V05_VERSION) {
+      diagnostics.push(diag("error", "loop-version-unsupported", `${kind} requires version: 0.4 or later.`, node.location.line));
       continue;
     }
     if (loopDepth(document, node) > 3) diagnostics.push(diag("error", "loop-depth-exceeded", "Loop nesting may not exceed three levels.", node.location.line));
@@ -439,6 +453,35 @@ function validateLoops(document: V03Document): { loops: V03LoopSpec[]; diagnosti
   return { loops, diagnostics };
 }
 
+/**
+ * v0.5 promotes common UI design concerns into named declarative layers. They
+ * are intentionally advisory: a small dialog should not be rejected merely
+ * because it has no route or data binding.
+ */
+function assessUiDesign(document: V03Document): { profiles: V03UiDesignProfile[]; diagnostics: Diagnostic[] } {
+  const diagnostics: Diagnostic[] = []; const profiles: V03UiDesignProfile[] = [];
+  for (const ui of allNodes(document).filter((node) => node.kind === "ui")) {
+    const nodes = [ui, ...allItems(ui).filter((item): item is V03Node => item.type === "node")];
+    const has = (kinds: string[]) => nodes.some((node) => kinds.includes(node.kind) || node.declaration !== undefined && kinds.includes(node.declaration));
+    const statements = descendants(ui);
+    const profile: V03UiDesignProfile = {
+      ui: ui.name ?? ui.id,
+      designTokens: has(["design", "token"]) || statements.some((item) => ["token", "theme", "spacing", "color", "typography"].includes(item.field)),
+      responsive: has(["responsive", "breakpoint"]) || statements.some((item) => ["breakpoint", "responsive"].includes(item.field)),
+      accessibility: has(["accessibility", "a11y"]) || statements.some((item) => ["a11y", "role", "label"].includes(item.field)),
+      navigation: has(["navigation", "transition"]) || statements.some((item) => ["route", "to", "event"].includes(item.field)),
+      dataBinding: has(["binding", "data", "model"]) || statements.some((item) => ["bind", "data", "model"].includes(item.field)),
+      states: has(["state"]) || statements.some((item) => item.field === "state"),
+    };
+    profiles.push(profile);
+    if (document.version === V05_VERSION) {
+      const omitted = (["designTokens", "responsive", "accessibility", "navigation", "dataBinding", "states"] as const).filter((key) => !profile[key]);
+      if (omitted.length) diagnostics.push(diag("warning", "sui-design-review", `UI "${profile.ui}" omits ${omitted.join(", ")}; record it when relevant or explicitly leave it absent for a bounded UI.`, ui.location.line, 1, `ui.${profile.ui}`));
+    }
+  }
+  return { profiles, diagnostics };
+}
+
 export function validateV03(documentOrSource: V03Document | string): V03Validation {
   const document = typeof documentOrSource === "string" ? parseV03(documentOrSource) : documentOrSource;
   const diagnostics: Diagnostic[] = [];
@@ -447,7 +490,7 @@ export function validateV03(documentOrSource: V03Document | string): V03Validati
   if (!versionStatements.length || versionStatements.some((statement) => statement.value !== document.version)) diagnostics.push(diag("error", "version-mismatch", `Every v${document.version} contract must declare version: ${document.version}.`));
   const names = new Set<string>();
   for (const node of top) if (node.name) { const key = `${node.kind}:${node.name}`; if (names.has(key)) diagnostics.push(diag("error", "duplicate-contract", `Duplicate ${node.kind} "${node.name}".`, node.location.line)); names.add(key); }
-  const dependency = buildDependencyGraph(document); const component = buildComponentGraph(document); const loopValidation = validateLoops(document); diagnostics.push(...dependency.diagnostics, ...component.diagnostics, ...loopValidation.diagnostics);
+  const dependency = buildDependencyGraph(document); const component = buildComponentGraph(document); const loopValidation = validateLoops(document); const uiDesign = assessUiDesign(document); diagnostics.push(...dependency.diagnostics, ...component.diagnostics, ...loopValidation.diagnostics, ...uiDesign.diagnostics);
   for (const node of allNodes(document).filter((node) => node.kind === "rule")) for (const field of ["subject", "action", "resource", "effect"]) if (!descendants(node).some((statement) => statement.field === field)) diagnostics.push(diag("error", "rule-property-missing", `Rule "${node.name ?? node.id}" requires ${field}.`, node.location.line));
   for (const node of allNodes(document).filter((node) => node.kind === "data_policy")) for (const field of ["data", "classification", "readable_by", "writable_by", "retention", "external_transfer", "log_value"]) if (!descendants(node).some((statement) => statement.field === field || (field === "readable_by" && groupEntries(node, field).length) || (field === "writable_by" && groupEntries(node, field).length))) diagnostics.push(diag("error", "data-policy-property-missing", `Data policy "${node.name ?? node.id}" requires ${field}.`, node.location.line));
   for (const node of allNodes(document).filter((node) => node.kind === "verification")) for (const field of ["applies_to", "method", "observe", "expected", "evidence", "unavailable_behavior"]) if (!descendants(node).some((statement) => statement.field === field)) diagnostics.push(diag("error", "verification-property-missing", `Verification "${node.name ?? node.id}" requires ${field}.`, node.location.line));
@@ -466,7 +509,7 @@ export function validateV03(documentOrSource: V03Document | string): V03Validati
   const hasVerification = allNodes(document).some((node) => node.kind === "verification") || tasks(document).some((task) => groupEntries(task, "verify").length > 0);
   const profile: V03ReadinessProfile = { syntax: score(errors), semantic: unresolved.size ? { score: 70, status: "review" } : localContractReferences.size ? { score: 85, status: "review" } : score(errors), context: { score: top.some((node) => node.kind === "task") ? 80 : 50, status: top.some((node) => node.kind === "task") ? "review" : "blocked" }, dependency: score(dependency.diagnostics.filter((item) => item.severity === "error").length), implementation: { score: 75, status: "review" }, ui: score(component.diagnostics.filter((item) => item.severity === "error").length), security: { score: 90, status: "review" }, verification: { score: hasVerification ? 80 : 45, status: hasVerification ? "review" : "blocked" }, authorization: { score: declaredAuthorization ? 50 : 0, status: declaredAuthorization ? "review" : "blocked" }, overall: 0, safeToExecute: false, continuation: errors ? "blocked" : "continue_with_review", canContinue: errors === 0 };
   profile.overall = Math.round(Object.values(profile).filter((value): value is V03ReadinessDimension => typeof value === "object" && "score" in value).reduce((total, value) => total + value.score, 0) / 9);
-  return { valid: !errors, diagnostics, dependencyGraph: dependency.graph, componentGraph: component.graph, readiness: profile, unresolvedReferences: [...unresolved], localContractReferences: [...localContractReferences], loops: loopValidation.loops, declaredExtensions: [...extensions], executionAuthorization: { declared: declaredAuthorization, staticAuthorization: false, reason: "A declarative execution_authorized field is recorded but never authorizes host execution by itself." } };
+  return { valid: !errors, diagnostics, dependencyGraph: dependency.graph, componentGraph: component.graph, readiness: profile, unresolvedReferences: [...unresolved], localContractReferences: [...localContractReferences], loops: loopValidation.loops, declaredExtensions: [...extensions], uiDesignProfiles: uiDesign.profiles, executionAuthorization: { declared: declaredAuthorization, staticAuthorization: false, reason: "A declarative execution_authorized field is recorded but never authorizes host execution by itself." } };
 }
 
 /** Converts the SIL subset of a v0.3 task to the established v0.1-compatible IR. */

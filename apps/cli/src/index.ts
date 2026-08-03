@@ -112,7 +112,7 @@ async function main(): Promise<void> {
   }
 
   const source = command === "codebook" ? "" : await readInput(input);
-  const isV03 = /^\s*(?:task|ui|bundle|model|semantic|parameter|rule|data_policy|verification)\s+[A-Za-z][A-Za-z0-9_]*:\s*$/mu.test(source) && /^\s*version:\s*0\.(?:3|4)\s*$/mu.test(source);
+  const isV03 = /^\s*(?:task|ui|bundle|model|semantic|parameter|rule|data_policy|verification|design|responsive|accessibility|navigation|binding|data)\s+[A-Za-z][A-Za-z0-9_]*:\s*$/mu.test(source) && /^\s*version:\s*0\.(?:3|4|5)\s*$/mu.test(source);
   const isBundle = !isV03 && isSilSuiBundleSource(source);
   const isTopLevelBlock = /^\s*(?:semantic|parameter|model|example|token|breakpoint|a11y|transition)\s+/u.test(source);
   const isSui = /^\s*ui\s+/u.test(source);
@@ -280,19 +280,19 @@ async function main(): Promise<void> {
       console.log(`${lines.join("\n")}\n`); return;
     }
     case "graph": {
-      if (!isV03) throw new Error("graph currently requires a v0.3 or v0.4 Pythonic contract.");
+      if (!isV03) throw new Error("graph currently requires a v0.3, v0.4, or v0.5 Pythonic contract.");
       const validation = validateV03(parseV03(source)); console.log(JSON.stringify({ dependencyGraph: validation.dependencyGraph, componentGraph: validation.componentGraph, loops: validation.loops, diagnostics: validation.diagnostics }, null, 2)); if (!validation.valid) process.exitCode = 1; return;
     }
     case "inspect": {
-      if (!isV03) throw new Error("inspect currently requires a v0.3 or v0.4 Pythonic contract.");
+      if (!isV03) throw new Error("inspect currently requires a v0.3, v0.4, or v0.5 Pythonic contract.");
       const document = parseV03(source); const validation = validateV03(document); console.log(JSON.stringify({ detectedLanguageVersion: document.version, detectedSyntaxStyle: "pythonic", normalizedIrVersion: document.version, sourceMetadata: document.sourceMetadata, contractIds: document.nodes.map((node) => node.name ?? node.id), migrationWarnings: [], ...validation }, null, 2)); return;
     }
     case "readiness": {
-      if (!isV03) throw new Error("readiness currently requires a v0.3 or v0.4 Pythonic contract.");
+      if (!isV03) throw new Error("readiness currently requires a v0.3, v0.4, or v0.5 Pythonic contract.");
       console.log(JSON.stringify(validateV03(parseV03(source)).readiness, null, 2)); return;
     }
     case "orchestrate": {
-      if (!isV03) throw new Error("orchestrate currently requires a v0.3 or v0.4 Pythonic contract.");
+      if (!isV03) throw new Error("orchestrate currently requires a v0.3, v0.4, or v0.5 Pythonic contract.");
       const mode = optionValue(flags, "--mode") ?? "discover";
       if (!['discover', 'repair', 'implement', 'verify', 'release'].includes(mode)) throw new Error("--mode must be discover, repair, implement, verify, or release.");
       const observations = await jsonOption(flags, "--observations", "--observations-json");
@@ -314,7 +314,7 @@ async function main(): Promise<void> {
       return;
     }
     case "patch": {
-      if (!isV03) throw new Error("patch currently requires a v0.3 or v0.4 Pythonic contract.");
+      if (!isV03) throw new Error("patch currently requires a v0.3, v0.4, or v0.5 Pythonic contract.");
       const patchPath = optionValue(flags, "--patch"); const patchJson = optionValue(flags, "--patch-json");
       if (Boolean(patchPath) === Boolean(patchJson)) throw new Error("Provide exactly one of --patch or --patch-json.");
       const operations = JSON.parse(patchJson ?? await readInput(patchPath)); if (!Array.isArray(operations)) throw new Error("Patch must be a JSON array.");

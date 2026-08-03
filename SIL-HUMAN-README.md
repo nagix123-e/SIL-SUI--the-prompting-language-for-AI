@@ -1,12 +1,12 @@
-# Semantic Instruction Language / Semantic UI Language (SIL/SUI) v0.3 — 完全文法・運用ガイド
+# Semantic Instruction Language / Semantic UI Language (SIL/SUI) v0.5 — 完全文法・運用ガイド
 
-更新日: 2026-07-26
+更新日: 2026-08-03
 対象実装: SIL Local Converter / CLI / SIL Runner / SIL Writer GPT
 自然言語入力: 多言語（日本語を含む）。意味仕様・識別子は英語へ正規化し、原文言語はprovenanceへ保存。
 
 ## 1. SILとは
 
-Semantic Instruction Language（SIL）とSemantic UI Language（SUI）は、AIへ渡す依頼やUI設計を、目的・対象・操作・入力・出力・制約・検証・失敗時動作へ分解する宣言型DSLです。v0.3では4スペースのPython風インデント構文、statement ID、scope、provenance、bundle DAG、Patch、Rule、Data Policy、component graphを追加しました。Python風でもPythonコードではありません。
+Semantic Instruction Language（SIL）とSemantic UI Language（SUI）は、AIへ渡す依頼やUI設計を、目的・対象・操作・入力・出力・制約・検証・失敗時動作へ分解する宣言型DSLです。v0.5では4スペースのPython風インデント構文、statement ID、scope、provenance、bundle DAG、Patch、Rule、Data Policy、component graphに加え、SUIの`design`、`responsive`、`accessibility`、`navigation`、`binding`、`data`レイヤーを標準化しました。Python風でもPythonコードではありません。
 
 SILそのものはコードを実行しません。構文が正しいことと、AIへ実行を許可できることは別です。
 

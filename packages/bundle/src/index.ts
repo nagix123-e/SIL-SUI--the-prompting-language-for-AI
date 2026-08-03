@@ -37,6 +37,8 @@ export interface SilSuiBundleValidation {
   valid: boolean;
   executionReady: boolean;
   semanticInteroperable: boolean;
+  /** Valid contracts can continue with explicit extension review. This never grants host permission. */
+  continuation: "blocked" | "continue_with_review";
   contracts: BundleContractValidation[];
   diagnostics: Diagnostic[];
   unregisteredReferences: UnregisteredSemanticMarker[];
@@ -469,8 +471,13 @@ export function validateSilSuiBundle(source: string, options: SemanticEnrichment
   } satisfies SemanticResearchRequest));
   return {
     valid,
-    executionReady: valid && semanticReferences.every((item) => item.resolution !== "unregistered") && (Boolean(taskCompilation?.readiness.safeToExecute) || Boolean(v02TaskReady)),
+    // An exact Core registration is needed for portable semantic
+    // interoperability, but it is not needed to preserve and review a valid
+    // user-defined domain contract.  Unknown references remain visible below
+    // and never become Core entries or host execution authority.
+    executionReady: valid && (Boolean(taskCompilation?.readiness.safeToExecute) || Boolean(v02TaskReady)),
     semanticInteroperable: valid && semanticReferences.every((item) => item.resolution !== "unregistered"),
+    continuation: valid ? "continue_with_review" : "blocked",
     contracts,
     diagnostics,
     unregisteredReferences,

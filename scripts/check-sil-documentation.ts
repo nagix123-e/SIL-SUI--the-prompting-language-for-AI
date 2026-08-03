@@ -18,7 +18,7 @@ for (const relativePath of documentationFiles) {
   for (const match of source.matchAll(/```(?:sil|sui)\s*\n([\s\S]*?)```/gu)) {
     const dsl = match[1].trim();
     if (!/^(?:task|ui|bundle)\s+/u.test(dsl)) continue;
-    if (/^\s*version:\s*0\.(?:3|4)\s*$/mu.test(dsl)) {
+    if (/^\s*version:\s*0\.(?:3|4|5)\s*$/mu.test(dsl)) {
       const validation = validateV03(parseV03(dsl));
       if (!validation.valid) throw new Error(`Invalid v${parseV03(dsl).version} example in ${relativePath}: ${validation.diagnostics.map((item) => item.message).join(" ")}`);
     } else if (/^\s*version:\s*0\.2\s*$/mu.test(dsl)) {

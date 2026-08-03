@@ -57,7 +57,7 @@ Each explicit conversion produces:
 
 The interpreter analyzes task descriptions but never performs their requested actions. A syntactically valid task may still be marked **Do not execute** when its target, output, verification, or other execution contract is underspecified. Prompt edits do not silently recompile. The application marks the previous result as stale until **Analyze & convert** is selected again. SIL edits similarly require **Validate & format**. SIL and every compiled artifact can be copied or downloaded locally.
 
-Natural-language input is multilingual in v0.4, including Japanese. The local deterministic analyzer remains English-oriented; non-English input is retained with source-language metadata and requires a configured normalization adapter before English semantic identifiers can be asserted. It is never silently sent to an external service. v0.4 adds bounded `for_each`, `repeat`, and `until` task loops plus SUI `render_each` collection templates; no loop is executable code or host authorization.
+Natural-language input is multilingual in v0.5, including Japanese. The local deterministic analyzer remains English-oriented; non-English input is retained with source-language metadata and requires a configured normalization adapter before English semantic identifiers can be asserted. It is never silently sent to an external service. v0.5 keeps v0.4 bounded `for_each`, `repeat`, and `until` task loops plus SUI `render_each` collection templates, and adds SUI `design`, `responsive`, `accessibility`, `navigation`, `binding`, and `data` layers. No declaration is executable code or host authorization. Precise unregistered references are preserved as reviewable extensions instead of blocking a valid handoff.
 
 ### Recommended human prompt pattern
 
@@ -137,10 +137,10 @@ The repository can produce a GitHub-release-ready ZIP that any **MCP-capable** A
 npm run mcp:kit
 ```
 
-The artifact is written to `releases/sil-sui-mcp-kit-v0.4.1.zip`. On the receiving computer, extract it and run:
+The artifact is written to `releases/sil-sui-mcp-kit-v0.5.0.zip`. On the receiving computer, extract it and run:
 
 ```bash
-cd sil-sui-mcp-kit-v0.4.1
+cd sil-sui-mcp-kit-v0.5.0
 npm ci
 npm run mcp -- init
 npm run mcp -- serve
